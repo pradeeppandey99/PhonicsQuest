@@ -122,7 +122,7 @@ input[type=text],select{font:inherit;border:3px solid var(--ink);border-radius:1
 const ALPHA='abcdefghijklmnopqrstuvwxyz'.split('');
 const DIGR=['sh','ch','th','ck','ng'];
 const VOW=new Set(['a','e','i','o','u']);
-const KW={a:['apple','🍎'],b:['ball','⚽'],c:['cat','🐱'],d:['dog','🐶'],e:['egg','🥚'],f:['fish','🐟'],g:['goat','🐐'],h:['hat','🎩'],i:['igloo','🛖'],j:['jet','✈️'],k:['kite','🪁'],l:['lion','🦁'],m:['moon','🌙'],n:['nut','🥜'],o:['octopus','🐙'],p:['pig','🐷'],q:['queen','👸'],r:['rat','🐀'],s:['sun','☀️'],t:['tiger','🐯'],u:['umbrella','☂️'],v:['van','🚐'],w:['web','🕸️'],x:['fox','🦊'],y:['yak','🦬'],z:['zebra','🦓'],sh:['ship','🚢'],ch:['chip','🍟'],th:['thumb','👍'],ck:['duck','🦆'],ng:['ring','💍']};
+const KW={a:['apple','🍎'],b:['ball','⚽'],c:['cat','🐱'],d:['dog','🐶'],e:['egg','🥚'],f:['fish','🐟'],g:['goat','🐐'],h:['hat','🎩'],i:['insect','🦗'],j:['jet','✈️'],k:['kite','🪁'],l:['lion','🦁'],m:['moon','🌙'],n:['nut','🥜'],o:['octopus','🐙'],p:['pig','🐷'],q:['queen','👸'],r:['rat','🐀'],s:['sun','☀️'],t:['tiger','🐯'],u:['umbrella','☂️'],v:['van','🚐'],w:['web','🕸️'],x:['fox','🦊'],y:['yo-yo','🪀'],z:['zebra','🦓'],sh:['ship','🚢'],ch:['chip','🍟'],th:['thumb','👍'],ck:['duck','🦆'],ng:['ring','💍']};
 const L1=['s','a','t','p','i','n'], L2=L1.concat(['m','d','g','o','c','k']);
 const LEVELS={
   1:{name:'First sounds',letters:L1},
@@ -132,12 +132,12 @@ const LEVELS={
 };
 const PW=[ /* picture words: [word, emoji, level] */
  ['pin','📌',1],['tap','🚰',1],['tin','🥫',1],['pan','🍳',1],['ant','🐜',1],
- ['cat','🐱',2],['dog','🐶',2],['map','🗺️',2],['mop','🧹',2],['cap','🧢',2],['pig','🐷',2],['kid','🧒',2],['dot','🔴',2],['man','👨',2],
- ['hen','🐔',3],['bed','🛏️',3],['pen','🖊️',3],['net','🥅',3],['leg','🦵',3],['jet','✈️',3],['web','🕸️',3],['bus','🚌',3],['sun','☀️',3],['mug','☕',3],['nut','🥜',3],['bug','🐛',3],['hat','🎩',3],['bat','🦇',3],['van','🚐',3],['fox','🦊',3],['box','📦',3],['log','🪵',3],['pot','🍲',3],['lip','👄',3],['rat','🐀',3],
+ ['cat','🐱',2],['dog','🐶',2],['map','🗺️',2],['cap','🧢',2],['pig','🐷',2],['kid','🧒',2],['man','👨',2],
+ ['hen','🐔',3],['bed','🛏️',3],['pen','🖊️',3],['leg','🦵',3],['jet','✈️',3],['web','🕸️',3],['bus','🚌',3],['sun','☀️',3],['nut','🥜',3],['bug','🐛',3],['hat','🎩',3],['bat','🦇',3],['van','🚐',3],['fox','🦊',3],['box','📦',3],['log','🪵',3],['lip','👄',3],['rat','🐀',3],
  ['ship','🚢',4],['chip','🍟',4],['duck','🦆',4],['ring','💍',4],['fish','🐟',4],['shop','🛍️',4],['king','👑',4],['sock','🧦',4],['bath','🛁',4]
 ].map(([w,em,lv])=>({w,em,lv}));
 const NSW={1:['tas','pim','nit','pas','tis'],2:['mog','cad','kig','dop','gam'],3:['zat','mip','dup','hep','lom','yib','vot','jeb'],4:['shup','chim','thog','nang','dack']};
-const LADDERS={1:['sat','sit','sip','tip','tap','nap','nip'],2:['cat','cot','dot','dog','dig','pig'],3:['hen','pen','pan','pat','pit','pig','big'],4:['hen','pen','pan','pat','pit','pig','big']};
+const LADDERS={0:['tap','sap','sat','pat'],1:['sat','sit','sip','tip','tap','nap','nip'],2:['cat','cot','dot','dog','dig','pig'],3:['hen','pen','pan','pat','pit','pig','big'],4:['hen','pen','pan','pat','pit','pig','big']};
 const SIGHT=['the','a','I','is','to','and','you','said','was','she','he','we','me','my','no','go'];
 const STICKERS=['🦁','🐯','🐼','🦋','🐬','🦄','🐘','🦉','🐢','🦜','🐙','🦊'];
 const COLORS=['#FF6F59','#FFC53D','#19B5A5','#7C5CFC','#7BD389'];
@@ -191,7 +191,11 @@ const urls={}; // key -> recorded Blob
 let AC=null,master=null;const bufs={};
 function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.connect(AC.destination)}master.gain.value=S.audio.vol;if(AC.state==='suspended')AC.resume();return AC}
 async function bufFor(k){if(bufs[k])return bufs[k];const ab=await urls[k].arrayBuffer();bufs[k]=await ac().decodeAudioData(ab);return bufs[k]}
-function playRec(k){return new Promise(async res=>{try{const c=ac();const b=await bufFor(k);const src=c.createBufferSource();src.buffer=b;src.connect(master);src.onended=()=>res();src.start();setTimeout(res,b.duration*1000+400)}catch(e){res()}})}
+let curSrc=null;
+function stopRec(){if(curSrc){try{curSrc.stop()}catch(e){}curSrc=null}}
+let epoch=0;
+function cancelAudio(){epoch++;stopRec();try{speechSynthesis.cancel()}catch(e){}}
+function playRec(k){return new Promise(async res=>{try{const c=ac();const b=await bufFor(k);stopRec();try{speechSynthesis.cancel()}catch(e){}const src=c.createBufferSource();src.buffer=b;src.connect(master);src.onended=()=>res();curSrc=src;src.start();setTimeout(res,b.duration*1000+400)}catch(e){res()}})}
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('phonicsQuestSounds',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function dbOp(mode,fn){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('s',mode);const st=tx.objectStore('s');const rq=fn(st);tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)})}
 async function loadSounds(){try{const keys=await dbOp('readonly',st=>st.getAllKeys());for(const k of keys){const b=await dbOp('readonly',st=>st.get(k));if(b)urls[k]=b}}catch(e){}}
@@ -202,7 +206,7 @@ function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en[-
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 const rate=()=>S.audio.speed==='slow'?0.62:0.85;
 function speak(text,r){return new Promise(res=>{if(!('speechSynthesis' in window)){res();return}
-  try{speechSynthesis.cancel();try{speechSynthesis.resume()}catch(e){}const u=new SpeechSynthesisUtterance(text);if(voice){u.voice=voice;u.lang=voice.lang}u.rate=r||rate();u.pitch=1.05;u.volume=1;u.onend=()=>res();u.onerror=()=>res();
+  try{stopRec();speechSynthesis.cancel();try{speechSynthesis.resume()}catch(e){}const u=new SpeechSynthesisUtterance(text);if(voice){u.voice=voice;u.lang=voice.lang}u.rate=r||rate();u.pitch=1.05;u.volume=1;u.onend=()=>res();u.onerror=()=>res();
     setTimeout(()=>{try{speechSynthesis.speak(u)}catch(e){res()}},80);setTimeout(res,6000)}catch(e){res()}})}
 /* phones only allow sound after a tap: unlock both the recorded-voice engine and the computer voice on the first touch */
 let unlocked=false;
@@ -210,23 +214,30 @@ function unlockAudio(){if(unlocked)return;unlocked=true;
   try{const c=ac();const b=c.createBuffer(1,1,22050);const src=c.createBufferSource();src.buffer=b;src.connect(c.destination);src.start(0)}catch(e){}
   try{if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch(e){}}
 ['pointerdown','touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
-/* single sounds: spoken respelling is only a fallback until the grown-up records real sounds */
-const RESP={a:'ah',b:'buh',c:'kuh',d:'duh',e:'eh',f:'fff',g:'guh',h:'huh',i:'ih',j:'juh',k:'kuh',l:'lll',m:'mmm',n:'nnn',o:'aw',p:'puh',q:'kwuh',r:'rrr',s:'sss',t:'tuh',u:'uh',v:'vvv',w:'wuh',x:'ks',y:'yuh',z:'zzz',sh:'shhh',ch:'chuh',th:'thhh',ck:'kuh',ng:'ng'};
+/* Without a recorded sound the computer cannot say a single sound clearly, so it always says the picture word (the same every time). */
 const heard=new Set();
-async function soundOnly(g){if(urls[g])return playRec(g);return speak(RESP[g]||g,.6)}
+async function soundOnly(g){if(urls[g])return playRec(g);return speak(KW[g]?KW[g][0]:g,.7)}
 /* first time in a session: the sound, then the picture word ("p ... pig"). After that: the sound only. */
 async function sayLetter(g){const first=!heard.has(g);heard.add(g);
   if(urls[g]){await playRec(g);if(first&&KW[g]){await sleep(150);await speak(KW[g][0])}}
-  else{await speak(first&&KW[g]?KW[g][0]:(RESP[g]||g),first?undefined:.6)}}
+  else{await speak(KW[g]?KW[g][0]:g,.7)}}
 const playSound=sayLetter;
 async function sayWord(w){return speak(w)}
-async function sayPhonemes(list,hl,gap){gap=gap||(S.audio.speed==='slow'?650:420);for(let i=0;i<list.length;i++){hl&&hl(i,true);await soundOnly(list[i]);hl&&hl(i,false);await sleep(gap)}}
+async function sayPhonemes(list,hl,gap,word){
+  gap=gap||(S.audio.speed==='slow'?650:420);const my=epoch;
+  if(list.every(g=>urls[g])){for(let i=0;i<list.length;i++){if(epoch!==my)return;hl&&hl(i,true);await playRec(list[i]);hl&&hl(i,false);if(epoch!==my)return;await sleep(gap)}return}
+  /* some sounds are not recorded: say the whole word slowly and light the letters up in turn */
+  const sp=speak(word||list.join(''),.4);
+  for(let i=0;i<list.length;i++){if(epoch!==my)return;hl&&hl(i,true);await sleep(S.audio.speed==='slow'?800:550);hl&&hl(i,false)}
+  await sp;
+}
 async function sayHow(name){const k='how-'+name;if(urls[k])return playRec(k);return speak(HOW[name].say)}
 
 /* ---------- ui helpers ---------- */
 const app=$('#app');
 let screen='home';
 function topbar(opts={}){
+  cancelAudio();
   const home=opts.home!==false;
   return `<div class="top"><div class="l">${home?'<button class="btn small white" data-act="home" aria-label="Home">🏠 Home</button>':''}</div>
   <div class="r"><button class="btn small white" data-act="snd" aria-label="Sound settings">🔊</button><span class="pill" aria-label="Stars">⭐ ${S.stars}</span>${opts.parent===false?'':'<button class="btn small white" data-act="gate">Grown-ups</button>'}</div></div>`;
@@ -293,6 +304,7 @@ function endScreen(game,right,total){
 
 /* ---------- 1. Sound Pop ---------- */
 R.pop=async function(){
+  heard.clear();
   const N=8;let targets=[];while(targets.length<N){const more=wpick(pool(),N-targets.length);if(targets.length&&more[0]===targets[targets.length-1]&&more.length>1)more.push(more.shift());targets=targets.concat(more)}let i=0,right=0;
   async function round(){
     if(i>=N)return endScreen('pop',right,N);
@@ -304,11 +316,11 @@ R.pop=async function(){
     <div class="balloons">${opts.map(g=>`<button class="balloon ${kind(g)}" data-g="${g}" aria-label="letter ${g}">${g}</button>`).join('')}</div></div>`;
     bindHow('pop');
     if(i===0&&guided('pop'))hint($(`.balloon[data-g="${t}"]`));
-    (async()=>{if(i===0){await sayHow('pop');await sleep(300)}sayLetter(t)})();
+    {const my=epoch;(async()=>{if(i===0){await sayHow('pop');await sleep(300)}if(epoch===my)sayLetter(t)})()}
     $('[data-act=again]').onclick=()=>soundOnly(t);
     $$('.balloon').forEach(b=>b.onclick=async()=>{
       const g=b.dataset.g;
-      if(g===t){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);if(tries===0){right++;bump(t,true);await cheer('ok')}await sleep(300);i++;round()}
+      if(g===t){cancelAudio();$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);if(tries===0){right++;bump(t,true);await cheer('ok')}await sleep(300);i++;round()}
       else{tries++;if(tries===1)bump(t,false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);if(tries===1)await cheer('try');soundOnly(t)}
     });
   }
@@ -317,11 +329,12 @@ R.pop=async function(){
 
 /* ---------- 2. Robot Talk ---------- */
 R.robot=async function(){
+  heard.clear();
   const all=picWords();const N=6;const items=shuffle(all).slice(0,Math.min(N,all.length));let i=0,right=0;
   async function round(){
     if(i>=items.length)return endScreen('robot',right,items.length);
     const it=items[i];const ph=phon(it.w);let tries=0;
-    const wrong=shuffle(all.filter(p=>p.w!==it.w)).slice(0,2);
+    const wrong=[];for(const p of shuffle(all)){if(p.w!==it.w&&p.em!==it.em&&!wrong.some(x=>x.em===p.em))wrong.push(p);if(wrong.length===2)break}
     const opts=shuffle([it].concat(wrong));
     app.innerHTML=`${topbar()}<div class="stage">${dots(i,items.length)}${howBar('robot')}
     <div class="prompt">Robot talk! What word is it?</div>
@@ -330,12 +343,12 @@ R.robot=async function(){
     <div class="pics mt">${opts.map(o=>`<button class="pic" data-w="${o.w}" aria-label="picture choice">${o.em}</button>`).join('')}</div></div>`;
     bindHow('robot');
     const hl=(k,on)=>{const t=$$('#rt .tile')[k];if(t)t.classList.toggle('lit',on)};
-    const say=()=>sayPhonemes(ph,hl);
+    const say=()=>{cancelAudio();return sayPhonemes(ph,hl,0,it.w)};
     if(i===0&&guided('robot'))hint($(`.pic[data-w="${it.w}"]`));
-    (async()=>{if(i===0){await sayHow('robot');await sleep(300)}say()})();
+    {const my=epoch;(async()=>{if(i===0){await sayHow('robot');await sleep(300)}if(epoch===my)say()})()}
     $('[data-act=again]').onclick=say;
     $$('.pic').forEach(b=>b.onclick=async()=>{
-      if(b.dataset.w===it.w){$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
+      if(b.dataset.w===it.w){cancelAudio();$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
       else{tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
     });
   }
@@ -344,6 +357,7 @@ R.robot=async function(){
 
 /* ---------- 3. Word Builder ---------- */
 R.build=async function(){
+  heard.clear();
   const all=picWords();const N=5;const items=shuffle(all).slice(0,Math.min(N,all.length));let i=0,right=0;
   async function round(){
     if(i>=items.length)return endScreen('build',right,items.length);
@@ -358,7 +372,7 @@ R.build=async function(){
     bindHow('build');
     const hintNext=()=>{unhint();if(i===0&&guided('build')&&next<ph.length){const t=$$('#tray .tile').find(x=>x.dataset.g===ph[next]&&x.style.visibility!=='hidden');hint(t)}};
     hintNext();
-    (async()=>{if(i===0){await sayHow('build');await sleep(300)}sayWord(it.w)})();
+    {const my=epoch;(async()=>{if(i===0){await sayHow('build');await sleep(300)}if(epoch===my)sayWord(it.w)})()}
     $('[data-act=say]').onclick=()=>sayWord(it.w);
     $$('#tray .tile').forEach(b=>b.onclick=async()=>{
       const g=b.dataset.g;
@@ -376,6 +390,7 @@ R.build=async function(){
 
 /* ---------- 4. Word Magic ---------- */
 R.magic=async function(){
+  heard.clear();
   const lad=pickLadder();let step=0,right=0,total=lad.length-1;
   async function round(){
     if(step>=total)return endScreen('magic',right,total);
@@ -389,14 +404,14 @@ R.magic=async function(){
     <div class="prompt mt" id="msg">Tap the letter to change.</div><div class="tiles" id="opts"></div></div>`;
     bindHow('magic');
     if(step===0&&guided('magic'))hint($$('#cur .tile')[pos]);
-    (async()=>{if(step===0){await sayHow('magic');await sleep(300)}sayWord(tgt)})();
+    {const my=epoch;(async()=>{if(step===0){await sayHow('magic');await sleep(300)}if(epoch===my)sayWord(tgt)})()}
     $('[data-act=say]').onclick=()=>sayWord(tgt);
     $$('#cur .tile').forEach(b=>b.onclick=()=>{
       if(picked)return;
       const k=+b.dataset.k;
       if(k!==pos){tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);return}
       unhint();$$('#cur .tile').forEach(x=>x.classList.remove('lit'));b.classList.add('lit');
-      const want=tgt[pos];const ch=shuffle(ALPHA.filter(c=>c!==want&&c!==cur[pos])).slice(0,3);
+      const want=tgt[pos];const base=avail().filter(c=>c.length===1);const cand=(base.length>=5?base:ALPHA).filter(c=>c!==want&&c!==cur[pos]);const ch=shuffle(cand).slice(0,3);
       $('#msg').textContent='Which letter?';
       $('#opts').innerHTML=shuffle([want].concat(ch)).map(c=>tile(c)).join('');
       if(step===0&&guided('magic'))hint($$('#opts .tile').find(x=>x.dataset.g===want));
@@ -412,6 +427,7 @@ R.magic=async function(){
 
 /* ---------- 5. Silly Words ---------- */
 R.silly=async function(){
+  heard.clear();
   const list=pickNS();let i=0,right=0;
   async function round(){
     if(i>=list.length)return endScreen('silly',right,list.length);
@@ -424,9 +440,9 @@ R.silly=async function(){
     bindHow('silly');
     if(i===0)sayHow('silly');
     const hl=(k,on)=>{const e=$$('#w .ph')[k];if(e)e.style.cssText=on?'color:#FFC53D;display:inline-block;transform:scale(1.2)':''};
-    $('[data-act=sound]').onclick=()=>sayPhonemes(ph,hl);
-    $('[data-act=yes]').onclick=async()=>{if(busy)return;busy=true;right++;ph.forEach(g=>bump(g,true));burst($('.monster'));$('.monster').textContent='😋';await cheer('ok');await sleep(500);i++;round()};
-    $('[data-act=no]').onclick=async()=>{if(busy)return;busy=true;ph.forEach(g=>bump(g,false));await sayPhonemes(ph,hl);await sleep(300);await sayWord(w);i++;round()};
+    $('[data-act=sound]').onclick=()=>{cancelAudio();return sayPhonemes(ph,hl,0,w)};
+    $('[data-act=yes]').onclick=async()=>{if(busy)return;busy=true;cancelAudio();right++;ph.forEach(g=>bump(g,true));burst($('.monster'));$('.monster').textContent='😋';await cheer('ok');await sleep(500);i++;round()};
+    $('[data-act=no]').onclick=async()=>{if(busy)return;busy=true;ph.forEach(g=>bump(g,false));await sayPhonemes(ph,hl,0,w);await sleep(300);await sayWord(w);i++;round()};
   }
   round();
 };
@@ -466,7 +482,7 @@ R.learn=function(){
   <div class="grownup"><b>Pick any sound to learn or learn again.</b> Green ones are already learned.<div class="tiles mt">${ALLG.map(g=>`<button class="tile sm ${kind(g)}${S.learned[g]?' ok':''}" data-act="lesson" data-gs="${g}" aria-label="learn ${g}">${g}</button>`).join('')}</div></div></div>`;
 };
 R.lesson=function(gs){
-  let gi=0;const total=gs.length;
+  heard.clear();let gi=0;const total=gs.length;
   const frame=(st,inner)=>{app.innerHTML=`${topbar()}<div class="stage">${dots(st,5)}<div class="prompt" style="margin:0 0 8px"><span class="muted">Sound ${gi+1} of ${total}</span></div>${inner}</div>`};
   const big=(g,sz=150)=>`<span class="tile ${kind(g)}" style="min-width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.64)}px;cursor:default">${g}</span>`;
   function nextSound(){gi++;if(gi>=total)return lessonEnd();run(0)}
@@ -479,14 +495,14 @@ R.lesson=function(gs){
     }else if(st===1){
       frame(1,`<div class="pict" aria-hidden="true">${ACT[g][1]}</div><div class="prompt">Do the action!</div><p class="actxt">${ACT[g][0]}</p><div class="tiles">${big(g,100)}</div>
       <div class="row"><button class="btn teal" data-x="hear">🔊 Hear the sound</button><button class="btn coral" data-x="next">Next ➜</button></div>`);
-      (async()=>{await speak(ACT[g][0]);await sleep(300);soundOnly(g)})();
+      {const my=epoch;(async()=>{await speak(ACT[g][0]);await sleep(300);if(epoch===my)soundOnly(g)})()}
       $('[data-x=hear]').onclick=()=>soundOnly(g);$('[data-x=next]').onclick=()=>run(2);
     }else if(st===2){
       frame(2,`<div class="pict" aria-hidden="true">🗣️</div><div class="prompt">Say it with me!</div><div class="tiles">${big(g,120)}</div>
       <div class="row"><button class="btn teal" data-x="hear">🔊 Again</button><button class="btn meadow" data-x="said">✓ I said it!</button></div>`);
-      const rep=async()=>{for(let k=0;k<3;k++){await soundOnly(g);await sleep(1300)}};
+      const rep=async()=>{cancelAudio();const my=epoch;for(let k=0;k<3;k++){if(epoch!==my)return;await soundOnly(g);if(epoch!==my)return;await sleep(1300)}};
       rep();$('[data-x=hear]').onclick=rep;
-      $('[data-x=said]').onclick=async e=>{e.currentTarget.disabled=true;burst(e.currentTarget);await cheer('ok');run(3)};
+      $('[data-x=said]').onclick=async e=>{e.currentTarget.disabled=true;cancelAudio();burst(e.currentTarget);await cheer('ok');run(3)};
     }else if(st===3){
       const known=Object.keys(S.learned).concat(L1).filter((x,i,a)=>x!==g&&a.indexOf(x)===i);
       const opts=shuffle([g].concat(shuffle(known).slice(0,2)));
@@ -495,7 +511,7 @@ R.lesson=function(gs){
       if(!S.seen.learn)hint($(`.balloon[data-g="${g}"]`));
       soundOnly(g);$('[data-x=hear]').onclick=()=>soundOnly(g);
       $$('.balloon').forEach(b=>b.onclick=async()=>{
-        if(b.dataset.g===g){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);markLearned(g);await cheer('ok');await sleep(300);run(4)}
+        if(b.dataset.g===g){cancelAudio();$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);markLearned(g);await cheer('ok');await sleep(300);run(4)}
         else{b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);soundOnly(g)}
       });
     }else{
@@ -614,7 +630,7 @@ function ddRender(){
   else if(k==='G'){stim=`<div class="prompt">Does <b>${it[0]}</b> rhyme with <b>${it[1]}</b>?</div><p>Right answer: <b>${it[2]?'Yes':'No'}</b></p>`;btns=`<button class="btn meadow" data-r="ok">✓ She was right</button><button class="btn white" data-r="no">✗ Wrong</button>`}
   app.innerHTML=`${topbar({parent:false})}<div class="stage"><div class="prompt" style="margin:0"><b>${d.k}. ${d.title}</b> <span class="muted">${DD.i+1} of ${n}</span></div><p class="small">${d.ask}</p>${stim}<div class="row">${extra}</div><div class="row">${btns}</div>
   <div class="row"><button class="btn small white" data-act="dback">Back</button><button class="btn small white" data-act="dskip">Skip this check</button><button class="btn small white" data-act="dquit">Quit</button></div></div>`;
-  if(k==='B')$('[data-act=robot]').onclick=()=>sayPhonemes(phon(it),null,300);
+  if(k==='B')$('[data-act=robot]').onclick=()=>sayPhonemes(phon(it),null,0,it);
   $$('[data-r]').forEach(b=>b.onclick=()=>{DD.res[k][DD.i]=b.dataset.r;DD.i++;ddRender()});
 }
 function ddFinish(){
