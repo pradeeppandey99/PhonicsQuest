@@ -39,6 +39,9 @@ h2{font-size:clamp(26px,4vw,38px)}
 .game .ic{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:64px;line-height:1}
 .game b{display:block;font-size:30px;font-weight:800}
 .game span{font-size:17px;font-weight:500}
+.g6{background:#FF7EB6}
+.actxt{font-size:26px;font-weight:700;max-width:640px;margin:6px auto 14px}
+.ph1{color:var(--coral)}
 .g1{background:var(--coral);color:#fff}.g2{background:var(--teal);color:#fff}.g3{background:var(--yellow)}.g4{background:var(--grape);color:#fff}.g5{background:var(--meadow)}
 .stickers{margin-top:30px;background:var(--white);border:4px solid var(--ink);border-radius:24px;padding:12px 18px;box-shadow:0 6px 0 var(--ink);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .stickers .row{font-size:40px;letter-spacing:6px}
@@ -165,19 +168,23 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function phon(w){const out=[];for(let i=0;i<w.length;){const two=w.slice(i,i+2);if(DIGR.includes(two)){out.push(two);i+=2}else{out.push(w[i]);i++}}return out}
 const KEY='phonicsQuest.v1';
 let S=(function(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}})()||{child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};
-function norm(){S.audio=Object.assign({vol:2,speed:'slow'},S.audio||{});S.seen=S.seen||{}}
+function norm(){S.audio=Object.assign({vol:2,speed:'slow'},S.audio||{});S.seen=S.seen||{};S.learned=S.learned||{};if(S.matchLearned===undefined)S.matchLearned=true}
 norm();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const today=()=>new Date().toISOString().slice(0,10);
 function mast(g){return S.mastery[g]==null?2:S.mastery[g]}
 function bump(g,ok){S.mastery[g]=clamp(mast(g)+(ok?1:-1),0,5);save()}
-function pool(){return LEVELS[S.level].letters}
+function avail(){const L=LEVELS[S.level].letters;const lr=Object.keys(S.learned||{});if(S.matchLearned&&lr.length>=4)return lr;return L}
+function pool(){return avail()}
+function okWord(w,A){return phon(w).every(g=>A.includes(g))}
+function pickLadder(){const A=avail();const ok=Object.values(LADDERS).filter(l=>l.every(w=>okWord(w,A)));return ok.length?pick(ok):LADDERS[S.level]}
+function pickNS(){const A=avail();const ws=[].concat(...Object.values(NSW)).filter(w=>okWord(w,A));return shuffle(ws.length>=3?ws:NSW[S.level]).slice(0,5)}
 function wpick(list,n){ // weighted by weakness, no repeats
   const out=[];let rest=list.slice();
   while(out.length<n&&rest.length){const w=rest.map(g=>6-mast(g));const tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot,i=0;for(;i<rest.length;i++){r-=w[i];if(r<=0)break}i=Math.min(i,rest.length-1);out.push(rest[i]);rest.splice(i,1)}
   return out;
 }
-function picWords(){const L=S.level;let ws=PW.filter(p=>p.lv<=L);if(L===4)ws=ws.filter(p=>p.lv===4).concat(shuffle(ws.filter(p=>p.lv<4)).slice(0,4));return ws}
+function picWords(){const A=avail();if(A!==LEVELS[S.level].letters){const ok=PW.filter(p=>okWord(p.w,A));if(ok.length>=3)return ok}const L=S.level;let ws=PW.filter(p=>p.lv<=L);if(L===4)ws=ws.filter(p=>p.lv===4).concat(shuffle(ws.filter(p=>p.lv<4)).slice(0,4));return ws}
 
 /* ---------- audio ---------- */
 const urls={}; // key -> recorded Blob
@@ -237,6 +244,7 @@ R.home=function(){
   app.innerHTML=`${topbar({home:false})}
   <div class="hero"><div class="mascot" aria-hidden="true">🦜</div><div><h1>Phonics Quest</h1><div class="hello">Hi ${nm}! Pick a game.</div></div></div>
   <div class="games">
+    <button class="game g6" data-act="learn"><span class="ic" aria-hidden="true">🌟</span><b>Learn</b><span>${learnNext(2).length?'New sounds: '+learnNext(2).join(', '):'Practise any sound.'}</span></button>
     <button class="game g1" data-act="game" data-g="pop"><span class="ic" aria-hidden="true">🎈</span><b>Pop</b><span>Hear a sound. Pop the letter.</span></button>
     <button class="game g2" data-act="game" data-g="robot"><span class="ic" aria-hidden="true">🤖</span><b>Robot</b><span>Robot says the sounds. Find the picture.</span></button>
     <button class="game g3" data-act="game" data-g="build"><span class="ic" aria-hidden="true">🧱</span><b>Build</b><span>Put the sounds in the boxes.</span></button>
@@ -273,7 +281,7 @@ function endScreen(game,right,total){
   const got=addStar(right>=Math.ceil(total*.7)?2:1);
   app.innerHTML=`${topbar()}<div class="stage"><div class="monster" aria-hidden="true">🎉</div><h2>Great job${S.child?', '+esc(S.child):''}!</h2><div class="prompt">${right} out of ${total}</div>${got?'<div class="prompt">New sticker! '+STICKERS[Math.floor(S.stars/10)-1]+'</div>':''}
   <div class="row"><button class="btn coral" data-act="game" data-g="${game}">Play again</button><button class="btn white" data-act="home">Home</button></div></div>`;
-  burst($('.monster'));
+  burst($('.monster'));cheer('end');
 }
 
 /* ---------- 1. Sound Pop ---------- */
@@ -293,8 +301,8 @@ R.pop=async function(){
     $('[data-act=again]').onclick=()=>soundOnly(t);
     $$('.balloon').forEach(b=>b.onclick=async()=>{
       const g=b.dataset.g;
-      if(g===t){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);if(tries===0){right++;bump(t,true)}await sleep(500);i++;round()}
-      else{tries++;if(tries===1)bump(t,false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);soundOnly(t)}
+      if(g===t){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);if(tries===0){right++;bump(t,true);await cheer('ok')}await sleep(300);i++;round()}
+      else{tries++;if(tries===1)bump(t,false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);if(tries===1)await cheer('try');soundOnly(t)}
     });
   }
   round();
@@ -320,7 +328,7 @@ R.robot=async function(){
     (async()=>{if(i===0){await sayHow('robot');await sleep(300)}say()})();
     $('[data-act=again]').onclick=say;
     $$('.pic').forEach(b=>b.onclick=async()=>{
-      if(b.dataset.w===it.w){$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true))}nextBar(it.w,()=>{i++;round()},true)}
+      if(b.dataset.w===it.w){$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
       else{tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
     });
   }
@@ -351,7 +359,7 @@ R.build=async function(){
       if(g===ph[next]){
         const box=$$('#boxes .tile')[next];box.className=`tile ${kind(g)}`;box.textContent=g;box.style.cursor='default';b.style.visibility='hidden';b.querySelectorAll('.hand').forEach(h=>h.remove());
         next++;hintNext();
-        if(next===ph.length){unhint();burst($('#boxes'));if(mistakes===0){right++;ph.forEach(x=>bump(x,true))}nextBar(it.w,()=>{i++;round()})}
+        if(next===ph.length){unhint();burst($('#boxes'));if(mistakes===0){right++;ph.forEach(x=>bump(x,true));await cheer('ok')}nextBar(it.w,()=>{i++;round()})}
         else await sayLetter(g);
       }else{mistakes++;bump(ph[next],false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);sayLetter(g)}
     });
@@ -361,7 +369,7 @@ R.build=async function(){
 
 /* ---------- 4. Word Magic ---------- */
 R.magic=async function(){
-  const lad=LADDERS[S.level];let step=0,right=0,total=lad.length-1;
+  const lad=pickLadder();let step=0,right=0,total=lad.length-1;
   async function round(){
     if(step>=total)return endScreen('magic',right,total);
     const cur=lad[step],tgt=lad[step+1];
@@ -385,9 +393,9 @@ R.magic=async function(){
       $('#msg').textContent='Which letter?';
       $('#opts').innerHTML=shuffle([want].concat(ch)).map(c=>tile(c)).join('');
       if(step===0&&guided('magic'))hint($$('#opts .tile').find(x=>x.dataset.g===want));
-      $$('#opts .tile').forEach(o=>o.onclick=()=>{
+      $$('#opts .tile').forEach(o=>o.onclick=async()=>{
         const g=o.dataset.g;
-        if(g===want){picked=true;unhint();$$('#opts .tile').forEach(x=>x.onclick=null);b.textContent=g;b.className='tile ok lit';burst(b);if(tries===0){right++;bump(g,true)}else{bump(g,false)}$('#msg').textContent='You made:';nextBar(tgt,()=>{step++;round()},true)}
+        if(g===want){picked=true;unhint();$$('#opts .tile').forEach(x=>x.onclick=null);b.textContent=g;b.className='tile ok lit';burst(b);if(tries===0){right++;bump(g,true);await cheer('ok')}else{bump(g,false)}$('#msg').textContent='You made:';nextBar(tgt,()=>{step++;round()},true)}
         else{tries++;o.classList.add('shake');setTimeout(()=>o.classList.remove('shake'),400)}
       });
     });
@@ -397,7 +405,7 @@ R.magic=async function(){
 
 /* ---------- 5. Silly Words ---------- */
 R.silly=async function(){
-  const list=shuffle(NSW[S.level]).slice(0,5);let i=0,right=0;
+  const list=pickNS();let i=0,right=0;
   async function round(){
     if(i>=list.length)return endScreen('silly',right,list.length);
     const w=list[i];const ph=phon(w);let busy=false;
@@ -410,10 +418,98 @@ R.silly=async function(){
     if(i===0)sayHow('silly');
     const hl=(k,on)=>{const e=$$('#w .ph')[k];if(e)e.style.cssText=on?'color:#FFC53D;display:inline-block;transform:scale(1.2)':''};
     $('[data-act=sound]').onclick=()=>sayPhonemes(ph,hl);
-    $('[data-act=yes]').onclick=async()=>{if(busy)return;busy=true;right++;ph.forEach(g=>bump(g,true));burst($('.monster'));$('.monster').textContent='😋';await sleep(700);i++;round()};
+    $('[data-act=yes]').onclick=async()=>{if(busy)return;busy=true;right++;ph.forEach(g=>bump(g,true));burst($('.monster'));$('.monster').textContent='😋';await cheer('ok');await sleep(500);i++;round()};
     $('[data-act=no]').onclick=async()=>{if(busy)return;busy=true;ph.forEach(g=>bump(g,false));await sayPhonemes(ph,hl);await sleep(300);await sayWord(w);i++;round()};
   }
   round();
+};
+
+/* ---------- praise (recorded by the grown-up, Grown-ups > Voices) ---------- */
+const PRAISE=[['praise-1','Praise 1','For example: "Shabash!"'],['praise-2','Praise 2','For example: "Wah!"'],['praise-3','Praise 3','For example: "Very good!"'],['praise-4','Praise 4','For example: "Super!"'],['praise-5','Praise 5','Any line she loves'],['try-1','Try again 1','For example: "Koi baat nahi, try again."'],['try-2','Try again 2','For example: "Almost! Listen again."'],['end-1','All done','For example: "Well done, you finished!"']];
+let lastPraise=null;
+async function cheer(kind){
+  const pre=kind==='ok'?'praise-':kind==='try'?'try-':'end-';
+  const keys=Object.keys(urls).filter(k=>k.startsWith(pre));
+  if(keys.length){const fresh=keys.filter(x=>x!==lastPraise);const k=pick(fresh.length?fresh:keys);lastPraise=k;await playRec(k)}
+  else if(kind==='ok'&&Math.random()<.4){await speak(pick(['Well done!','Great!','Yes!','Super!']))}
+}
+
+/* ---------- Learn mode ---------- */
+const LEARN_ORDER=['s','a','t','p','i','n','m','d','g','o','c','k','e','u','r','h','b','f','l','j','v','w','x','y','z','q','sh','ch','th','ck','ng'];
+const ACT={
+ s:['Wiggle your hand like a snake and hiss: sss.','🐍'],a:['Pretend to take a big bite of an apple.','🍎'],t:['Turn your head side to side, like watching tennis: t, t, t.','🎾'],
+ p:['Puff out a candle: p, p, p.','🕯️'],i:['Wiggle your fingers like a tiny insect crawling up your arm.','🐜'],n:['Stretch your arms out like a plane and hum: nnn.','✈️'],
+ m:['Rub your tummy and say: mmm, yummy.','😋'],d:['Beat a drum: d, d, d.','🥁'],g:['Pour water from a pretend jug: g, g, g.','🫗'],
+ o:['Flick a light switch on and off: o, o.','💡'],c:['Click your fingers: c, c, c.','🫰'],k:['Kick a ball with your foot: k, k, k.','⚽'],
+ e:['Tap an egg on the table: e, e, e.','🥚'],u:['Hold an umbrella over your head: u, u.','☂️'],r:['Wiggle your nose like a rabbit and growl: rrr.','🐰'],
+ h:['Pant like a hot dog with your tongue out: h, h, h.','🐶'],b:['Bounce a ball: b, b, b.','⚽'],f:['Let the air out of a balloon: fff.','🎈'],
+ l:['Lick a lollipop: lll.','🍭'],j:['Wobble like jelly: j, j, j.','🍮'],v:['Hold a steering wheel and drive a van: vvv.','🚐'],
+ w:['Wave your hands like the wind: w, w, w.','🌬️'],x:['Cross your arms into an X: ks, ks.','❌'],y:['Roll a yo-yo up and down: y, y, y.','🪀'],
+ z:['Buzz like a bee with one finger: zzz.','🐝'],q:['Put on a crown: kw, kw.','👑'],sh:['Finger on your lips: shhh.','🤫'],
+ ch:['Move your arms like a choo-choo train: ch, ch.','🚂'],th:['Stick your tongue out between your teeth: th.','😛'],ck:['Tap tap tap like a ticking clock: ck, ck.','⏰'],
+ ng:['Hum through your nose like a gong: ng.','🔔']
+};
+function learnNext(n=2){return LEARN_ORDER.filter(g=>!S.learned[g]).slice(0,n)}
+function markLearned(g){S.learned[g]=true;S.mastery[g]=Math.max(mast(g),3);save()}
+const ALLG=ALPHA.concat(DIGR);
+R.learn=function(){
+  const nx=learnNext(2);
+  app.innerHTML=`${topbar()}<div class="stage"><div class="pict" aria-hidden="true">🌟</div><h2>Learn new sounds</h2>
+  ${nx.length?`<div class="prompt">Today's sounds</div><div class="tiles">${nx.map(g=>tile(g)).join('')}</div><div class="row"><button class="btn coral" data-act="lesson" data-gs="${nx.join(',')}">Start</button></div>`:'<div class="prompt">You know all the sounds! Pick one to practise.</div>'}
+  <div class="grownup"><b>Pick any sound to learn or learn again.</b> Green ones are already learned.<div class="tiles mt">${ALLG.map(g=>`<button class="tile sm ${kind(g)}${S.learned[g]?' ok':''}" data-act="lesson" data-gs="${g}" aria-label="learn ${g}">${g}</button>`).join('')}</div></div></div>`;
+};
+R.lesson=function(gs){
+  let gi=0;const total=gs.length;
+  const frame=(st,inner)=>{app.innerHTML=`${topbar()}<div class="stage">${dots(st,5)}<div class="prompt" style="margin:0 0 8px"><span class="muted">Sound ${gi+1} of ${total}</span></div>${inner}</div>`};
+  const big=(g,sz=150)=>`<span class="tile ${kind(g)}" style="min-width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.64)}px;cursor:default">${g}</span>`;
+  function nextSound(){gi++;if(gi>=total)return lessonEnd();run(0)}
+  async function run(st){
+    const g=gs[gi];
+    if(st===0){
+      frame(0,`<div class="pict" aria-hidden="true">👀 ➜ 👂</div><div class="bigpic" aria-hidden="true">${KW[g][1]}</div><div class="tiles">${big(g)}</div><div class="prompt mt">This is <b>${g}</b></div>
+      <div class="row"><button class="btn teal" data-x="hear">🔊 Hear the sound</button><button class="btn coral" data-x="next">Next ➜</button></div>`);
+      sayLetter(g);$('[data-x=hear]').onclick=()=>soundOnly(g);$('[data-x=next]').onclick=()=>run(1);
+    }else if(st===1){
+      frame(1,`<div class="pict" aria-hidden="true">${ACT[g][1]}</div><div class="prompt">Do the action!</div><p class="actxt">${ACT[g][0]}</p><div class="tiles">${big(g,100)}</div>
+      <div class="row"><button class="btn teal" data-x="hear">🔊 Hear the sound</button><button class="btn coral" data-x="next">Next ➜</button></div>`);
+      (async()=>{await speak(ACT[g][0]);await sleep(300);soundOnly(g)})();
+      $('[data-x=hear]').onclick=()=>soundOnly(g);$('[data-x=next]').onclick=()=>run(2);
+    }else if(st===2){
+      frame(2,`<div class="pict" aria-hidden="true">🗣️</div><div class="prompt">Say it with me!</div><div class="tiles">${big(g,120)}</div>
+      <div class="row"><button class="btn teal" data-x="hear">🔊 Again</button><button class="btn meadow" data-x="said">✓ I said it!</button></div>`);
+      const rep=async()=>{for(let k=0;k<3;k++){await soundOnly(g);await sleep(1300)}};
+      rep();$('[data-x=hear]').onclick=rep;
+      $('[data-x=said]').onclick=async e=>{e.currentTarget.disabled=true;burst(e.currentTarget);await cheer('ok');run(3)};
+    }else if(st===3){
+      const known=Object.keys(S.learned).concat(L1).filter((x,i,a)=>x!==g&&a.indexOf(x)===i);
+      const opts=shuffle([g].concat(shuffle(known).slice(0,2)));
+      frame(3,`<div class="pict" aria-hidden="true">👂 ➜ 👆</div><div class="prompt">Which one says it?</div><div class="row" style="margin-top:0"><button class="btn teal" data-x="hear">🔊 Hear it again</button></div>
+      <div class="balloons">${opts.map(x=>`<button class="balloon ${kind(x)}" data-g="${x}" aria-label="letter ${x}">${x}</button>`).join('')}</div>`);
+      if(!S.seen.learn)hint($(`.balloon[data-g="${g}"]`));
+      soundOnly(g);$('[data-x=hear]').onclick=()=>soundOnly(g);
+      $$('.balloon').forEach(b=>b.onclick=async()=>{
+        if(b.dataset.g===g){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);markLearned(g);await cheer('ok');await sleep(300);run(4)}
+        else{b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);soundOnly(g)}
+      });
+    }else{
+      const ws=PW.filter(p=>phon(p.w)[0]===g).filter(p=>p.w!==KW[g][0]).slice(0,2).map(p=>({w:p.w,em:p.em}));
+      const items=[{w:KW[g][0],em:KW[g][1]}].concat(ws);
+      const hi=w=>{const i=Math.max(0,w.indexOf(g));return w.slice(0,i)+`<span class="ph1">${g}</span>`+w.slice(i+g.length)};
+      frame(4,`<div class="pict" aria-hidden="true">👀 ➜ 👂</div><div class="prompt">Words with <b>${g}</b>. Tap a picture.</div>
+      <div class="pics">${items.map(o=>`<div><button class="pic" data-w="${o.w}" aria-label="${o.w}">${o.em}</button><div class="word" style="font-size:40px">${hi(o.w)}</div></div>`).join('')}</div>
+      <div class="row"><button class="btn coral" data-x="done">${gi+1<total?'Next sound ➜':'Finish ✓'}</button></div>`);
+      const say=async w=>{await soundOnly(g);await sleep(200);await sayWord(w)};
+      $$('.pic').forEach(b=>b.onclick=()=>say(b.dataset.w));
+      $('[data-x=done]').onclick=nextSound;
+    }
+  }
+  function lessonEnd(){
+    S.seen.learn=true;save();log('learn',total,total);addStar(total*2);
+    app.innerHTML=`${topbar()}<div class="stage"><div class="monster" aria-hidden="true">🌟</div><h2>You learned new sounds!</h2><div class="tiles mt">${gs.map(g=>tile(g)).join('')}</div>
+    <div class="row"><button class="btn coral" data-act="game" data-g="pop">🎈 Play Pop</button><button class="btn teal" data-act="learn">🌟 Learn more</button><button class="btn white" data-act="home">Home</button></div></div>`;
+    burst($('.monster'));cheer('end');
+  }
+  run(0);
 };
 
 /* ---------- sound panel ---------- */
@@ -480,7 +576,7 @@ P.dash=function(el){
    <div class="card"><h3>What to do next</h3>
    ${sug?`<p>${esc(sug.why)}</p><p><b>Suggested level ${sug.lv}: ${LEVELS[sug.lv].name}.</b> Now set to level ${S.level}.</p>${sug.lv!==S.level?'<button class="btn teal" data-act="setlevel" data-lv="'+sug.lv+'">Use level '+sug.lv+'</button>':''}`:'<p>Do Detective Day first. Until then the app is on level '+S.level+' ('+LEVELS[S.level].name+').</p>'}
    <p class="small muted mt">Re-do Detective Day every two weeks. Move up when she scores 8/10 on the level's checks.</p>
-   <div class="sum"><div><b>${S.stars}</b>stars</div><div><b>${S.sessions.length}</b>games played</div><div><b>${streak}</b>day streak</div></div></div>
+   <div class="sum"><div><b>${S.stars}</b>stars</div><div><b>${S.sessions.length}</b>games played</div><div><b>${streak}</b>day streak</div><div><b>${Object.keys(S.learned).length}</b>sounds learned</div></div></div>
   </div>
   <div class="card mt"><h3>Letter map</h3><div class="lmap">${all.map(g=>{const st=letterState(g);return `<div class="lcell s${st}" title="${g}">${g}<small>${st===3?'good':st===2?'ok':st===1?'learn':''}</small></div>`}).join('')}</div>
    <p class="legend mt">Grey: not tried. Pink: still learning. Yellow: getting there. Green: good. Updates from the games and from Detective Day.</p></div>
@@ -519,7 +615,7 @@ function ddFinish(){
   DD.items.A.forEach((g,i)=>{items.A[g]=DD.res.A[i]||'no'});
   const a={date:today(),scores,items};S.assessments.push(a);
   // seed letter mastery from the check
-  Object.entries(items.A).forEach(([g,v])=>{S.mastery[g]=v==='ok'?3:v==='name'?2:1});
+  Object.entries(items.A).forEach(([g,v])=>{S.mastery[g]=v==='ok'?3:v==='name'?2:1;if(v==='ok')S.learned[g]=true});
   save();DD=null;
   const sug=suggestLevel(a);
   app.innerHTML=`${topbar({parent:false})}<div class="stage"><div class="monster" aria-hidden="true">🕵️</div><h2>Detective Day done</h2>
@@ -536,6 +632,11 @@ P.voices=function(el){
   <div class="card mt"><h3>Say the instructions in your own voice</h3><p>Children follow instructions best in the language they know best. Record each one in Hindi, Telugu or English, up to 7 seconds. Tap the red button to start and the square to stop. If you skip these, the computer reads the English instruction.</p></div>
   <div class="rec mt">${INSTR.map(([k,name,txt])=>`<div class="recrow" style="flex-wrap:wrap"><span class="st" style="min-width:100%"><b>${name}</b> <span class="muted">${txt}</span> <i>${urls[k]?'(recorded)':'(not yet)'}</i></span>
     <button class="btn small coral" data-act="rec" data-g="${k}" data-ms="7000" aria-label="record ${name}">●</button>
+    <button class="btn small white" data-act="play" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="play ${name}">▶</button>
+    <button class="btn small white" data-act="del" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="delete ${name}">✕</button></div>`).join('')}</div>
+  <div class="card mt"><h3>Praise in your voice</h3><p>Short lines she hears when she gets something right, tries again, or finishes. Say them in the language she likes best (Hindi, Telugu or English), up to 4 seconds each. Tap the red button to start and the square to stop. Record two or three so it does not repeat too often. Without recordings, the computer says a short "Well done" now and then.</p></div>
+  <div class="rec mt">${PRAISE.map(([k,name,txt])=>`<div class="recrow" style="flex-wrap:wrap"><span class="st" style="min-width:100%"><b>${name}</b> <span class="muted">${txt}</span> <i>${urls[k]?'(recorded)':'(not yet)'}</i></span>
+    <button class="btn small coral" data-act="rec" data-g="${k}" data-ms="4000" aria-label="record ${name}">●</button>
     <button class="btn small white" data-act="play" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="play ${name}">▶</button>
     <button class="btn small white" data-act="del" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="delete ${name}">✕</button></div>`).join('')}</div>
   <div class="card mt"><h3>The letter sounds</h3></div>
@@ -558,6 +659,8 @@ P.settings=function(el){
   el.innerHTML=`<div class="card"><h3>Settings</h3>
   <p><label>Child's name <input type="text" id="nm" value="${esc(S.child)}" maxlength="20"></label></p>
   <p><label>Level <select id="lv">${[1,2,3,4].map(n=>`<option value="${n}" ${S.level===n?'selected':''}>${n}. ${LEVELS[n].name}</option>`).join('')}</select></label></p>
+  <p><label><input type="checkbox" id="ml" ${S.matchLearned?'checked':''}> Games use only the sounds she has learned (once she has learned 4)</label></p>
+  <p class="small muted">Sounds learned so far: ${Object.keys(S.learned).length} of ${ALLG.length}.</p>
   <div class="row" style="justify-content:flex-start"><button class="btn teal" data-act="savesettings">Save</button><button class="btn white" data-act="testvoice">Test computer voice</button></div></div>
   <div class="card mt"><h3>Your data</h3><p class="small">Everything is stored only in this browser on this computer. Nothing is sent anywhere. Back it up from time to time.</p>
   <div class="row" style="justify-content:flex-start"><button class="btn white" data-act="export">Download backup</button><label class="btn white">Restore backup<input type="file" id="imp" accept=".json" hidden></label><button class="btn coral" data-act="reset">Erase everything</button></div></div>`;
@@ -577,10 +680,12 @@ document.addEventListener('click',async e=>{
   else if(a==='dskip'){DD.sec++;DD.i=0;if(DD.sec>=DETECTIVE.length)ddFinish();else ddRender()}
   else if(a==='dquit'){if(confirm('Quit without saving this check?')){DD=null;go('parent','detect')}}
   else if(a==='snd')R.snd();
+  else if(a==='learn')go('learn');
+  else if(a==='lesson')go('lesson',t.dataset.gs.split(','));
   else if(a==='rec')doRecord(t.dataset.g,t,+(t.dataset.ms||1500));
   else if(a==='play'){if(urls[t.dataset.g])playRec(t.dataset.g)}
   else if(a==='del'){if(confirm('Delete this recording?')){await delSound(t.dataset.g);P.voices($('#pbody'))}}
-  else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;save();go('parent','settings')}
+  else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;S.matchLearned=$('#ml').checked;save();go('parent','settings')}
   else if(a==='testvoice')speak('Hello! Let us read together.');
   else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
   else if(a==='reset'){if(confirm('Erase all progress and stars? This cannot be undone.')){S={child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};norm();save();go('home')}}
