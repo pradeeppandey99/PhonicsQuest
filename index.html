@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phonics Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1B4B; --sky:#DCE6FF; --yellow:#FFC53D; --coral:#FF6F59; --teal:#19B5A5;
+  --grape:#7C5CFC; --meadow:#7BD389; --white:#FFFFFF; --soft:#F3F6FF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sky);color:var(--ink);font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;font-size:18px;line-height:1.35;min-height:100vh}
+.tiles,.word,.big-letter,.tile{font-family:'Andika','Century Gothic','Comic Sans MS','Trebuchet MS',sans-serif}
+button{font:inherit;color:inherit}
+:focus-visible{outline:4px dashed var(--grape);outline-offset:4px}
+#app{max-width:1000px;margin:0 auto;padding:16px 20px 60px}
+.top{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:14px;min-height:56px}
+.top .l,.top .r{display:flex;align-items:center;gap:10px}
+.pill{background:var(--white);border:4px solid var(--ink);border-radius:999px;padding:2px 16px;font-weight:700;box-shadow:0 4px 0 var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:4px solid var(--ink);border-radius:20px;background:var(--yellow);box-shadow:0 6px 0 var(--ink);padding:8px 20px;font-weight:700;cursor:pointer;transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
+.btn.teal{background:var(--teal);color:#fff}.btn.coral{background:var(--coral);color:#fff}.btn.grape{background:var(--grape);color:#fff}.btn.white{background:#fff}.btn.meadow{background:var(--meadow)}
+.btn.small{padding:2px 14px;font-size:16px;box-shadow:0 4px 0 var(--ink);border-radius:14px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+h1,h2,h3{margin:0;font-weight:800;line-height:1.05}
+h1{font-size:clamp(40px,7vw,72px)}
+h2{font-size:clamp(26px,4vw,38px)}
+.hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:6px 0 22px}
+.mascot{font-size:96px;line-height:1;filter:drop-shadow(0 6px 0 rgba(30,27,75,.25))}
+.hello{font-size:26px;font-weight:700}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.game{position:relative;text-align:left;border:4px solid var(--ink);border-radius:28px;box-shadow:0 8px 0 var(--ink);padding:18px 20px 18px 110px;min-height:130px;cursor:pointer;transition:transform .1s,box-shadow .1s}
+.game:hover{transform:translateY(-3px);box-shadow:0 11px 0 var(--ink)}
+.game:active{transform:translateY(6px);box-shadow:0 2px 0 var(--ink)}
+.game .ic{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:64px;line-height:1}
+.game b{display:block;font-size:30px;font-weight:800}
+.game span{font-size:17px;font-weight:500}
+.g1{background:var(--coral);color:#fff}.g2{background:var(--teal);color:#fff}.g3{background:var(--yellow)}.g4{background:var(--grape);color:#fff}.g5{background:var(--meadow)}
+.stickers{margin-top:30px;background:var(--white);border:4px solid var(--ink);border-radius:24px;padding:12px 18px;box-shadow:0 6px 0 var(--ink);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.stickers .row{font-size:40px;letter-spacing:6px}
+.card{background:var(--white);border:4px solid var(--ink);border-radius:24px;box-shadow:0 6px 0 var(--ink);padding:18px 22px}
+.stage{background:var(--white);border:4px solid var(--ink);border-radius:32px;box-shadow:0 8px 0 var(--ink);padding:22px 20px 28px;text-align:center}
+.dots{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+.dots i{width:16px;height:16px;border-radius:50%;border:3px solid var(--ink);background:#fff}
+.dots i.on{background:var(--meadow)}.dots i.now{background:var(--yellow)}
+.prompt{font-size:clamp(22px,3.5vw,32px);font-weight:700;margin:6px 0 16px}
+.tiles{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center}
+.tile{display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:96px;padding:0 12px;border:4px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);font-size:56px;font-weight:700;cursor:pointer;background:var(--yellow);color:var(--ink);transition:transform .08s,box-shadow .08s,opacity .2s}
+.tile.v{background:var(--coral);color:#fff}.tile.d{background:var(--grape);color:#fff}
+.tile.sm{min-width:64px;height:68px;font-size:40px;border-radius:16px}
+.tile.empty{background:var(--soft);box-shadow:none;border-style:dashed;cursor:default;color:transparent}
+.tile.lit{transform:translateY(-8px) scale(1.08);box-shadow:0 14px 0 var(--ink)}
+.tile:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
+.tile,.pic{position:relative}
+.tile.shake{animation:shake .35s}
+.tile.pop{animation:pop .4s forwards}
+.tile.ok{background:var(--meadow);color:var(--ink)}
+.pict{font-size:54px;line-height:1.1;margin:2px 0 6px}
+.hint{outline:6px solid var(--coral);outline-offset:4px;animation:pulse 1s ease-in-out infinite}
+.hand{position:absolute;left:50%;bottom:-46px;font-size:44px;transform:translateX(-50%);animation:tap 1s ease-in-out infinite;pointer-events:none;z-index:5}
+@keyframes pulse{50%{outline-color:var(--yellow);outline-offset:9px}}
+@keyframes tap{50%{transform:translate(-50%,-10px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(0);opacity:0}}
+.balloons{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;padding:6px 0 10px}
+.balloon{width:128px;height:150px;border:4px solid var(--ink);border-radius:50% 50% 48% 48%/58% 58% 42% 42%;display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:700;cursor:pointer;box-shadow:0 8px 0 var(--ink);position:relative;animation:bob 3s ease-in-out infinite}
+.balloon:nth-child(2n){animation-delay:-1s}.balloon:nth-child(3n){animation-delay:-2s}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.balloon.v{background:var(--coral);color:#fff}.balloon.c{background:var(--yellow)}.balloon.d{background:var(--grape);color:#fff}
+.pics{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.pic{width:150px;height:150px;font-size:90px;display:flex;align-items:center;justify-content:center;border:4px solid var(--ink);border-radius:28px;background:var(--soft);box-shadow:0 6px 0 var(--ink);cursor:pointer}
+.pic.shake{animation:shake .35s}.pic.ok{background:var(--meadow)}
+.bigpic{font-size:120px;line-height:1.1}
+.word{font-size:clamp(56px,12vw,110px);font-weight:700;letter-spacing:.04em;line-height:1.1}
+.monster{font-size:120px;line-height:1}
+.mouth{display:inline-block;background:var(--grape);color:#fff;border:4px solid var(--ink);border-radius:36px;padding:14px 38px;box-shadow:0 8px 0 var(--ink)}
+.row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+.grownup{margin-top:22px;padding-top:14px;border-top:3px dashed var(--ink);font-size:16px}
+.confetti{position:fixed;width:12px;height:12px;border-radius:3px;pointer-events:none;z-index:50;transition:transform .9s cubic-bezier(.2,.8,.3,1),opacity .9s}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.tab{padding:4px 18px;border:4px solid var(--ink);border-radius:999px;background:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.tab.on{background:var(--ink);color:#fff}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.bar{height:20px;border:3px solid var(--ink);border-radius:999px;background:var(--soft);overflow:hidden;position:relative;margin:4px 0 2px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--teal)}
+.bar i.base{background:var(--yellow);opacity:.9;height:50%}
+.bar i.now{top:50%}
+.legend{font-size:15px;opacity:.85}
+.lmap{display:flex;flex-wrap:wrap;gap:8px}
+.lcell{width:54px;height:64px;gap:3px;border:3px solid var(--ink);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Andika',sans-serif;font-weight:700;font-size:22px;background:#E4E8F5;line-height:1}
+.lcell small{font-size:12px;font-family:'Baloo 2',sans-serif;font-weight:700}
+.lcell.s1{background:#FFB4A8}.lcell.s2{background:#FFE08A}.lcell.s3{background:#A8E6B1}
+.small{font-size:15px}
+.muted{opacity:.75}
+input[type=text],select{font:inherit;border:3px solid var(--ink);border-radius:12px;padding:6px 12px;background:#fff;color:var(--ink)}
+.rec{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.recrow{display:flex;align-items:center;gap:8px;background:var(--soft);border:3px solid var(--ink);border-radius:14px;padding:6px 10px}
+.recrow .t{font-family:'Andika',sans-serif;font-weight:700;font-size:26px;min-width:36px}
+.recrow .st{flex:1;font-size:14px}
+.modal{position:fixed;inset:0;background:rgba(30,27,75,.55);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+.modal .card{max-width:420px;width:100%;text-align:center}
+.mt{margin-top:14px}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+.sum div{background:var(--soft);border:3px solid var(--ink);border-radius:16px;padding:8px 12px}
+.sum b{font-size:28px;display:block}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:560px){.game{padding-left:96px}.tile{min-width:72px;height:80px;font-size:46px}.balloon{width:104px;height:124px;font-size:58px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ---------- data ---------- */
+const ALPHA='abcdefghijklmnopqrstuvwxyz'.split('');
+const DIGR=['sh','ch','th','ck','ng'];
+const VOW=new Set(['a','e','i','o','u']);
+const KW={a:['apple','🍎'],b:['ball','⚽'],c:['cat','🐱'],d:['dog','🐶'],e:['egg','🥚'],f:['fish','🐟'],g:['goat','🐐'],h:['hat','🎩'],i:['igloo','🛖'],j:['jet','✈️'],k:['kite','🪁'],l:['lion','🦁'],m:['moon','🌙'],n:['nut','🥜'],o:['octopus','🐙'],p:['pig','🐷'],q:['queen','👸'],r:['rat','🐀'],s:['sun','☀️'],t:['tiger','🐯'],u:['umbrella','☂️'],v:['van','🚐'],w:['web','🕸️'],x:['fox','🦊'],y:['yak','🦬'],z:['zebra','🦓'],sh:['ship','🚢'],ch:['chip','🍟'],th:['thumb','👍'],ck:['duck','🦆'],ng:['ring','💍']};
+const L1=['s','a','t','p','i','n'], L2=L1.concat(['m','d','g','o','c','k']);
+const LEVELS={
+  1:{name:'First sounds',letters:L1},
+  2:{name:'More sounds',letters:L2},
+  3:{name:'All letters',letters:ALPHA},
+  4:{name:'Sound pairs',letters:ALPHA.concat(DIGR)}
+};
+const PW=[ /* picture words: [word, emoji, level] */
+ ['pin','📌',1],['tap','🚰',1],['tin','🥫',1],['pan','🍳',1],['ant','🐜',1],
+ ['cat','🐱',2],['dog','🐶',2],['map','🗺️',2],['mop','🧹',2],['cap','🧢',2],['pig','🐷',2],['kid','🧒',2],['dot','🔴',2],['man','👨',2],
+ ['hen','🐔',3],['bed','🛏️',3],['pen','🖊️',3],['net','🥅',3],['leg','🦵',3],['jet','✈️',3],['web','🕸️',3],['bus','🚌',3],['sun','☀️',3],['mug','☕',3],['nut','🥜',3],['bug','🐛',3],['hat','🎩',3],['bat','🦇',3],['van','🚐',3],['fox','🦊',3],['box','📦',3],['log','🪵',3],['pot','🍲',3],['lip','👄',3],['rat','🐀',3],
+ ['ship','🚢',4],['chip','🍟',4],['duck','🦆',4],['ring','💍',4],['fish','🐟',4],['shop','🛍️',4],['king','👑',4],['sock','🧦',4],['bath','🛁',4]
+].map(([w,em,lv])=>({w,em,lv}));
+const NSW={1:['tas','pim','nit','pas','tis'],2:['mog','cad','kig','dop','gam'],3:['zat','mip','dup','hep','lom','yib','vot','jeb'],4:['shup','chim','thog','nang','dack']};
+const LADDERS={1:['sat','sit','sip','tip','tap','nap','nip'],2:['cat','cot','dot','dog','dig','pig'],3:['hen','pen','pan','pat','pit','pig','big'],4:['hen','pen','pan','pat','pit','pig','big']};
+const SIGHT=['the','a','I','is','to','and','you','said','was','she','he','we','me','my','no','go'];
+const STICKERS=['🦁','🐯','🐼','🦋','🐬','🦄','🐘','🦉','🐢','🦜','🐙','🦊'];
+const COLORS=['#FF6F59','#FFC53D','#19B5A5','#7C5CFC','#7BD389'];
+const DETECTIVE=[
+ {k:'A',title:'Letter sounds',n:26,ask:'Show the letter. Ask: "What sound does this make?" The sound, not the name.'},
+ {k:'B',title:'Blending (spoken)',n:10,ask:'Say the word sound by sound in a robot voice. Ask: "What word is that?"'},
+ {k:'C',title:'Segmenting (spoken)',n:5,ask:'Say the word. Ask her to say each sound on its own.'},
+ {k:'D',title:'Reading simple words',n:10,ask:'Show the word. Ask her to read it.'},
+ {k:'E',title:'Silly words',n:6,ask:'These are made-up words, so she cannot guess. Ask her to read them.'},
+ {k:'F',title:'Common words',n:10,ask:'Show the word. Ask her to read it.'},
+ {k:'G',title:'Rhymes',n:5,ask:'Ask the question out loud. The right answer is shown.'}
+];
+const B_WORDS=['cat','sun','pin','hen','mug','dog','bed','lip','top','bus'];
+const C_WORDS=['sun','pig','bed','map','bus'];
+const D_WORDS=['mat','sit','hop','red','tub','jam','fin','cot','web','nap'];
+const E_WORDS=['zat','mip','dup','hep','lom','yib'];
+const G_PAIRS=[['cat','hat',true],['dog','log',true],['sun','pen',false],['bed','red',true],['pig','bus',false]];
+
+/* ---------- helpers ---------- */
+const $=(s,el=document)=>el.querySelector(s);
+const $$=(s,el=document)=>[...el.querySelectorAll(s)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const kind=g=>VOW.has(g)?'v':(g.length>1?'d':'c');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function phon(w){const out=[];for(let i=0;i<w.length;){const two=w.slice(i,i+2);if(DIGR.includes(two)){out.push(two);i+=2}else{out.push(w[i]);i++}}return out}
+const KEY='phonicsQuest.v1';
+let S=(function(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}})()||{child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};
+function norm(){S.audio=Object.assign({vol:2,speed:'slow'},S.audio||{});S.seen=S.seen||{}}
+norm();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const today=()=>new Date().toISOString().slice(0,10);
+function mast(g){return S.mastery[g]==null?2:S.mastery[g]}
+function bump(g,ok){S.mastery[g]=clamp(mast(g)+(ok?1:-1),0,5);save()}
+function pool(){return LEVELS[S.level].letters}
+function wpick(list,n){ // weighted by weakness, no repeats
+  const out=[];let rest=list.slice();
+  while(out.length<n&&rest.length){const w=rest.map(g=>6-mast(g));const tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot,i=0;for(;i<rest.length;i++){r-=w[i];if(r<=0)break}i=Math.min(i,rest.length-1);out.push(rest[i]);rest.splice(i,1)}
+  return out;
+}
+function picWords(){const L=S.level;let ws=PW.filter(p=>p.lv<=L);if(L===4)ws=ws.filter(p=>p.lv===4).concat(shuffle(ws.filter(p=>p.lv<4)).slice(0,4));return ws}
+
+/* ---------- audio ---------- */
+const urls={}; // key -> recorded Blob
+let AC=null,master=null;const bufs={};
+function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.connect(AC.destination)}master.gain.value=S.audio.vol;if(AC.state==='suspended')AC.resume();return AC}
+async function bufFor(k){if(bufs[k])return bufs[k];const ab=await urls[k].arrayBuffer();bufs[k]=await ac().decodeAudioData(ab);return bufs[k]}
+function playRec(k){return new Promise(async res=>{try{const c=ac();const b=await bufFor(k);const src=c.createBufferSource();src.buffer=b;src.connect(master);src.onended=()=>res();src.start();setTimeout(res,b.duration*1000+400)}catch(e){res()}})}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('phonicsQuestSounds',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function dbOp(mode,fn){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('s',mode);const st=tx.objectStore('s');const rq=fn(st);tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)})}
+async function loadSounds(){try{const keys=await dbOp('readonly',st=>st.getAllKeys());for(const k of keys){const b=await dbOp('readonly',st=>st.get(k));if(b)urls[k]=b}}catch(e){}}
+async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k]}
+async function delSound(k){await dbOp('readwrite',st=>st.delete(k));delete urls[k];delete bufs[k]}
+let voice=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en[-_]IN/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+const rate=()=>S.audio.speed==='slow'?0.62:0.85;
+function speak(text,r){return new Promise(res=>{if(!('speechSynthesis' in window)){res();return}
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(voice)u.voice=voice;u.lang=voice?voice.lang:'en-IN';u.rate=r||rate();u.pitch=1.05;u.volume=1;u.onend=()=>res();u.onerror=()=>res();speechSynthesis.speak(u);setTimeout(res,6000)}catch(e){res()}})}
+/* single sounds: spoken respelling is only a fallback until the grown-up records real sounds */
+const RESP={a:'ah',b:'buh',c:'kuh',d:'duh',e:'eh',f:'fff',g:'guh',h:'huh',i:'ih',j:'juh',k:'kuh',l:'lll',m:'mmm',n:'nnn',o:'aw',p:'puh',q:'kwuh',r:'rrr',s:'sss',t:'tuh',u:'uh',v:'vvv',w:'wuh',x:'ks',y:'yuh',z:'zzz',sh:'shhh',ch:'chuh',th:'thhh',ck:'kuh',ng:'ng'};
+const heard=new Set();
+async function soundOnly(g){if(urls[g])return playRec(g);return speak(RESP[g]||g,.6)}
+/* first time in a session: the sound, then the picture word ("p ... pig"). After that: the sound only. */
+async function sayLetter(g){const first=!heard.has(g);heard.add(g);
+  if(urls[g]){await playRec(g);if(first&&KW[g]){await sleep(150);await speak(KW[g][0])}}
+  else{await speak(first&&KW[g]?KW[g][0]:(RESP[g]||g),first?undefined:.6)}}
+const playSound=sayLetter;
+async function sayWord(w){return speak(w)}
+async function sayPhonemes(list,hl,gap){gap=gap||(S.audio.speed==='slow'?650:420);for(let i=0;i<list.length;i++){hl&&hl(i,true);await soundOnly(list[i]);hl&&hl(i,false);await sleep(gap)}}
+async function sayHow(name){const k='how-'+name;if(urls[k])return playRec(k);return speak(HOW[name].say)}
+
+/* ---------- ui helpers ---------- */
+const app=$('#app');
+let screen='home';
+function topbar(opts={}){
+  const home=opts.home!==false;
+  return `<div class="top"><div class="l">${home?'<button class="btn small white" data-act="home" aria-label="Home">🏠 Home</button>':''}</div>
+  <div class="r"><button class="btn small white" data-act="snd" aria-label="Sound settings">🔊</button><span class="pill" aria-label="Stars">⭐ ${S.stars}</span>${opts.parent===false?'':'<button class="btn small white" data-act="gate">Grown-ups</button>'}</div></div>`;
+}
+function tile(g,extra=''){return `<button class="tile ${kind(g)} ${extra}" data-g="${g}" aria-label="letter ${g}">${g}</button>`}
+function dots(i,n){return `<div class="dots" aria-label="Round ${i+1} of ${n}">${Array.from({length:n},(_,k)=>`<i class="${k<i?'on':k===i?'now':''}"></i>`).join('')}</div>`}
+function burst(el){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const r=(el||document.body).getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;
+  for(let i=0;i<16;i++){const s=document.createElement('span');s.className='confetti';s.style.left=cx+'px';s.style.top=cy+'px';s.style.background=COLORS[i%5];document.body.appendChild(s);
+    const a=Math.random()*Math.PI*2,d=70+Math.random()*110;requestAnimationFrame(()=>{s.style.transform=`translate(${Math.cos(a)*d}px,${Math.sin(a)*d+30}px) rotate(${Math.random()*540}deg)`;s.style.opacity='0'});setTimeout(()=>s.remove(),950)}
+}
+function addStar(n=1){const before=Math.floor(S.stars/10);S.stars+=n;save();const pill=$('.pill');if(pill)pill.textContent='⭐ '+S.stars;return Math.floor(S.stars/10)>before}
+function log(game,right,total){S.sessions.push({t:Date.now(),d:today(),game,right,total});save()}
+function go(name,arg){screen=name;window.scrollTo(0,0);R[name](arg)}
+
+/* ---------- home ---------- */
+const R={};
+R.home=function(){
+  const nm=S.child?esc(S.child):'friend';
+  const stick=STICKERS.slice(0,Math.floor(S.stars/10));
+  app.innerHTML=`${topbar({home:false})}
+  <div class="hero"><div class="mascot" aria-hidden="true">🦜</div><div><h1>Phonics Quest</h1><div class="hello">Hi ${nm}! Pick a game.</div></div></div>
+  <div class="games">
+    <button class="game g1" data-act="game" data-g="pop"><span class="ic" aria-hidden="true">🎈</span><b>Pop</b><span>Hear a sound. Pop the letter.</span></button>
+    <button class="game g2" data-act="game" data-g="robot"><span class="ic" aria-hidden="true">🤖</span><b>Robot</b><span>Robot says the sounds. Find the picture.</span></button>
+    <button class="game g3" data-act="game" data-g="build"><span class="ic" aria-hidden="true">🧱</span><b>Build</b><span>Put the sounds in the boxes.</span></button>
+    <button class="game g4" data-act="game" data-g="magic"><span class="ic" aria-hidden="true">🪄</span><b>Magic</b><span>Change one letter. New word!</span></button>
+    <button class="game g5" data-act="game" data-g="silly"><span class="ic" aria-hidden="true">👾</span><b>Silly</b><span>Feed the monster silly words.</span></button>
+  </div>
+  ${ALPHA.filter(g=>urls[g]).length<20?'<div class="card mt small"><b>Grown-up:</b> the letter sounds are not recorded yet, so the games say a picture word (for example "sun") instead of the sound. Open <b>Grown-ups</b>, then <b>Voices</b>, and record the sounds once. It takes about 5 minutes.</div>':''}
+  <div class="stickers"><b>My stickers</b><span class="row" aria-label="Stickers">${stick.length?stick.join(' '):'<span class="muted small">Collect 10 stars for the first sticker.</span>'}</span></div>`;
+};
+
+/* ---------- game shell ---------- */
+const HOW={
+  pop:{say:'Listen to the sound. Tap the letter that says it.',pict:'👂 ➜ 👆'},
+  robot:{say:'The robot says the sounds. Put them together. Tap the picture.',pict:'🤖 ➜ 🖼️👆'},
+  build:{say:'Look at the picture. Tap the sounds in order to build the word.',pict:'🖼️ ➜ 🔤👆'},
+  magic:{say:'Change one letter to make a new word. Tap the letter that changes.',pict:'✏️ ➜ 🔤'},
+  silly:{say:'Read the silly word. Tap the speaker to hear it sounded out.',pict:'👾 ➜ 🗣️'}
+};
+const howBar=name=>`<div class="pict" aria-hidden="true">${HOW[name].pict}</div><div class="row" style="margin:0 0 6px"><button class="btn small white" data-x="how">❓ How to play</button></div>`;
+function bindHow(name){const b=$('[data-x=how]');if(b)b.onclick=()=>sayHow(name)}
+function hint(el){if(!el)return;el.classList.add('hint');const h=document.createElement('span');h.className='hand';h.textContent='👆';h.setAttribute('aria-hidden','true');el.appendChild(h)}
+function unhint(){$$('.hint').forEach(e=>e.classList.remove('hint'));$$('.hand').forEach(e=>e.remove())}
+const guided=name=>!S.seen[name];
+function nextBar(word,onNext,showWord){
+  const bar=document.createElement('div');bar.className='row';
+  bar.innerHTML=(showWord?`<div style="width:100%"><div class="word" style="font-size:64px">${word}</div></div>`:'')+`<button class="btn teal" data-x="hear">🔊 Hear the word</button><button class="btn coral" data-x="next">Next ➜</button>`;
+  $('.stage').appendChild(bar);
+  $('[data-x=hear]',bar).onclick=()=>sayWord(word);
+  $('[data-x=next]',bar).onclick=e=>{e.currentTarget.disabled=true;onNext()};
+  sayWord(word);
+}
+function endScreen(game,right,total){
+  log(game,right,total);S.seen[game]=true;save();
+  const got=addStar(right>=Math.ceil(total*.7)?2:1);
+  app.innerHTML=`${topbar()}<div class="stage"><div class="monster" aria-hidden="true">🎉</div><h2>Great job${S.child?', '+esc(S.child):''}!</h2><div class="prompt">${right} out of ${total}</div>${got?'<div class="prompt">New sticker! '+STICKERS[Math.floor(S.stars/10)-1]+'</div>':''}
+  <div class="row"><button class="btn coral" data-act="game" data-g="${game}">Play again</button><button class="btn white" data-act="home">Home</button></div></div>`;
+  burst($('.monster'));
+}
+
+/* ---------- 1. Sound Pop ---------- */
+R.pop=async function(){
+  const N=8;let targets=[];while(targets.length<N){const more=wpick(pool(),N-targets.length);if(targets.length&&more[0]===targets[targets.length-1]&&more.length>1)more.push(more.shift());targets=targets.concat(more)}let i=0,right=0;
+  async function round(){
+    if(i>=N)return endScreen('pop',right,N);
+    const t=targets[i];let tries=0;
+    const others=shuffle(pool().filter(g=>g!==t)).slice(0,Math.min(4,pool().length-1));
+    const opts=shuffle([t].concat(others));
+    app.innerHTML=`${topbar()}<div class="stage">${dots(i,N)}${howBar('pop')}<div class="prompt">Listen. Tap the letter you hear.</div>
+    <div class="row" style="margin-top:0"><button class="btn teal" data-act="again">🔊 Hear it again</button></div>
+    <div class="balloons">${opts.map(g=>`<button class="balloon ${kind(g)}" data-g="${g}" aria-label="letter ${g}">${g}</button>`).join('')}</div></div>`;
+    bindHow('pop');
+    if(i===0&&guided('pop'))hint($(`.balloon[data-g="${t}"]`));
+    (async()=>{if(i===0){await sayHow('pop');await sleep(300)}sayLetter(t)})();
+    $('[data-act=again]').onclick=()=>soundOnly(t);
+    $$('.balloon').forEach(b=>b.onclick=async()=>{
+      const g=b.dataset.g;
+      if(g===t){$$('.balloon').forEach(x=>x.onclick=null);unhint();b.classList.add('pop');burst(b);if(tries===0){right++;bump(t,true)}await sleep(500);i++;round()}
+      else{tries++;if(tries===1)bump(t,false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);soundOnly(t)}
+    });
+  }
+  round();
+};
+
+/* ---------- 2. Robot Talk ---------- */
+R.robot=async function(){
+  const all=picWords();const N=6;const items=shuffle(all).slice(0,Math.min(N,all.length));let i=0,right=0;
+  async function round(){
+    if(i>=items.length)return endScreen('robot',right,items.length);
+    const it=items[i];const ph=phon(it.w);let tries=0;
+    const wrong=shuffle(all.filter(p=>p.w!==it.w)).slice(0,2);
+    const opts=shuffle([it].concat(wrong));
+    app.innerHTML=`${topbar()}<div class="stage">${dots(i,items.length)}${howBar('robot')}
+    <div class="prompt">Robot talk! What word is it?</div>
+    <div class="tiles" id="rt">${ph.map(g=>`<span class="tile sm ${kind(g)}" style="cursor:default">${g}</span>`).join('')}</div>
+    <div class="row"><button class="btn teal" data-act="again">🔊 Say it again</button></div>
+    <div class="pics mt">${opts.map(o=>`<button class="pic" data-w="${o.w}" aria-label="picture choice">${o.em}</button>`).join('')}</div></div>`;
+    bindHow('robot');
+    const hl=(k,on)=>{const t=$$('#rt .tile')[k];if(t)t.classList.toggle('lit',on)};
+    const say=()=>sayPhonemes(ph,hl);
+    if(i===0&&guided('robot'))hint($(`.pic[data-w="${it.w}"]`));
+    (async()=>{if(i===0){await sayHow('robot');await sleep(300)}say()})();
+    $('[data-act=again]').onclick=say;
+    $$('.pic').forEach(b=>b.onclick=async()=>{
+      if(b.dataset.w===it.w){$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true))}nextBar(it.w,()=>{i++;round()},true)}
+      else{tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
+    });
+  }
+  round();
+};
+
+/* ---------- 3. Word Builder ---------- */
+R.build=async function(){
+  const all=picWords();const N=5;const items=shuffle(all).slice(0,Math.min(N,all.length));let i=0,right=0;
+  async function round(){
+    if(i>=items.length)return endScreen('build',right,items.length);
+    const it=items[i];const ph=phon(it.w);let next=0,mistakes=0;
+    const extra=shuffle(pool().filter(g=>!ph.includes(g))).slice(0,2);
+    const trayLetters=shuffle(ph.concat(extra));
+    app.innerHTML=`${topbar()}<div class="stage">${dots(i,items.length)}${howBar('build')}<div class="bigpic" aria-hidden="true">${it.em}</div>
+    <div class="prompt">Build the word. Tap the sounds in order.</div>
+    <div class="row" style="margin-top:0"><button class="btn teal" data-act="say">🔊 Say the word</button></div>
+    <div class="tiles mt" id="boxes">${ph.map(()=>`<span class="tile empty">·</span>`).join('')}</div>
+    <div class="tiles mt" id="tray">${trayLetters.map((g,k)=>`<button class="tile ${kind(g)}" data-g="${g}" data-k="${k}">${g}</button>`).join('')}</div></div>`;
+    bindHow('build');
+    const hintNext=()=>{unhint();if(i===0&&guided('build')&&next<ph.length){const t=$$('#tray .tile').find(x=>x.dataset.g===ph[next]&&x.style.visibility!=='hidden');hint(t)}};
+    hintNext();
+    (async()=>{if(i===0){await sayHow('build');await sleep(300)}sayWord(it.w)})();
+    $('[data-act=say]').onclick=()=>sayWord(it.w);
+    $$('#tray .tile').forEach(b=>b.onclick=async()=>{
+      const g=b.dataset.g;
+      if(next>=ph.length)return;
+      if(g===ph[next]){
+        const box=$$('#boxes .tile')[next];box.className=`tile ${kind(g)}`;box.textContent=g;box.style.cursor='default';b.style.visibility='hidden';b.querySelectorAll('.hand').forEach(h=>h.remove());
+        next++;hintNext();
+        if(next===ph.length){unhint();burst($('#boxes'));if(mistakes===0){right++;ph.forEach(x=>bump(x,true))}nextBar(it.w,()=>{i++;round()})}
+        else await sayLetter(g);
+      }else{mistakes++;bump(ph[next],false);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);sayLetter(g)}
+    });
+  }
+  round();
+};
+
+/* ---------- 4. Word Magic ---------- */
+R.magic=async function(){
+  const lad=LADDERS[S.level];let step=0,right=0,total=lad.length-1;
+  async function round(){
+    if(step>=total)return endScreen('magic',right,total);
+    const cur=lad[step],tgt=lad[step+1];
+    const pos=[...cur].findIndex((c,k)=>c!==tgt[k]);
+    let picked=false,tries=0;
+    app.innerHTML=`${topbar()}<div class="stage">${dots(step,total)}${howBar('magic')}<div class="prompt">Change <b>one</b> letter to make:</div>
+    <div class="word" style="font-size:clamp(44px,9vw,80px)">${tgt}</div>
+    <div class="row" style="margin-top:4px"><button class="btn teal" data-act="say">🔊 Hear it</button></div>
+    <div class="tiles mt" id="cur">${[...cur].map((c,k)=>`<button class="tile ${kind(c)}" data-k="${k}">${c}</button>`).join('')}</div>
+    <div class="prompt mt" id="msg">Tap the letter to change.</div><div class="tiles" id="opts"></div></div>`;
+    bindHow('magic');
+    if(step===0&&guided('magic'))hint($$('#cur .tile')[pos]);
+    (async()=>{if(step===0){await sayHow('magic');await sleep(300)}sayWord(tgt)})();
+    $('[data-act=say]').onclick=()=>sayWord(tgt);
+    $$('#cur .tile').forEach(b=>b.onclick=()=>{
+      if(picked)return;
+      const k=+b.dataset.k;
+      if(k!==pos){tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);return}
+      unhint();$$('#cur .tile').forEach(x=>x.classList.remove('lit'));b.classList.add('lit');
+      const want=tgt[pos];const ch=shuffle(ALPHA.filter(c=>c!==want&&c!==cur[pos])).slice(0,3);
+      $('#msg').textContent='Which letter?';
+      $('#opts').innerHTML=shuffle([want].concat(ch)).map(c=>tile(c)).join('');
+      if(step===0&&guided('magic'))hint($$('#opts .tile').find(x=>x.dataset.g===want));
+      $$('#opts .tile').forEach(o=>o.onclick=()=>{
+        const g=o.dataset.g;
+        if(g===want){picked=true;unhint();$$('#opts .tile').forEach(x=>x.onclick=null);b.textContent=g;b.className='tile ok lit';burst(b);if(tries===0){right++;bump(g,true)}else{bump(g,false)}$('#msg').textContent='You made:';nextBar(tgt,()=>{step++;round()},true)}
+        else{tries++;o.classList.add('shake');setTimeout(()=>o.classList.remove('shake'),400)}
+      });
+    });
+  }
+  round();
+};
+
+/* ---------- 5. Silly Words ---------- */
+R.silly=async function(){
+  const list=shuffle(NSW[S.level]).slice(0,5);let i=0,right=0;
+  async function round(){
+    if(i>=list.length)return endScreen('silly',right,list.length);
+    const w=list[i];const ph=phon(w);let busy=false;
+    app.innerHTML=`${topbar()}<div class="stage">${dots(i,list.length)}${howBar('silly')}<div class="monster" aria-hidden="true">👾</div>
+    <div class="prompt">Feed the monster. Read the silly word!</div>
+    <div class="mouth"><div class="word" id="w">${[...ph].map(g=>`<span class="ph">${g}</span>`).join('')}</div></div>
+    <div class="row"><button class="btn teal" data-act="sound">🔊 Sound it out</button></div>
+    <div class="grownup"><b>Grown-up:</b> did she read it? <div class="row" style="margin-top:8px"><button class="btn small meadow" data-act="yes">✓ She read it</button><button class="btn small white" data-act="no">Needs help</button></div></div></div>`;
+    bindHow('silly');
+    if(i===0)sayHow('silly');
+    const hl=(k,on)=>{const e=$$('#w .ph')[k];if(e)e.style.cssText=on?'color:#FFC53D;display:inline-block;transform:scale(1.2)':''};
+    $('[data-act=sound]').onclick=()=>sayPhonemes(ph,hl);
+    $('[data-act=yes]').onclick=async()=>{if(busy)return;busy=true;right++;ph.forEach(g=>bump(g,true));burst($('.monster'));$('.monster').textContent='😋';await sleep(700);i++;round()};
+    $('[data-act=no]').onclick=async()=>{if(busy)return;busy=true;ph.forEach(g=>bump(g,false));await sayPhonemes(ph,hl);await sleep(300);await sayWord(w);i++;round()};
+  }
+  round();
+};
+
+/* ---------- sound panel ---------- */
+R.snd=function(){
+  const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div class="card"><h2>Sound</h2><p>Loudness of the recorded voice</p><input type="range" id="vol" min="1" max="3" step="0.25" value="${S.audio.vol}" style="width:100%" aria-label="Loudness"><p>Speed</p>
+  <div class="row" style="margin-top:0"><button class="btn small ${S.audio.speed==='slow'?'teal':'white'}" data-sp="slow">🐢 Slow</button><button class="btn small ${S.audio.speed==='normal'?'teal':'white'}" data-sp="normal">🐇 Normal</button></div>
+  <div class="row"><button class="btn coral" id="tst">🔊 Test</button><button class="btn white" id="cls">Done</button></div>
+  <p class="small muted">The computer voice cannot be louder than the computer's own volume. Turn that up as well.</p></div>`;
+  document.body.appendChild(m);
+  const test=()=>{const g=ALPHA.concat(DIGR).find(x=>urls[x]);if(g)playRec(g);else speak('Can you hear me?')};
+  $('#vol',m).oninput=e=>{S.audio.vol=+e.target.value;save();if(master)master.gain.value=S.audio.vol};
+  $('#vol',m).onchange=test;
+  $$('[data-sp]',m).forEach(b=>b.onclick=()=>{S.audio.speed=b.dataset.sp;save();$$('[data-sp]',m).forEach(x=>x.className='btn small '+(x.dataset.sp===S.audio.speed?'teal':'white'));test()});
+  $('#tst',m).onclick=test;$('#cls',m).onclick=()=>m.remove();
+};
+
+/* ---------- parent: gate ---------- */
+R.gate=function(){
+  const a=2+Math.floor(Math.random()*7),b=3+Math.floor(Math.random()*6);
+  const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div class="card"><h2>Grown-ups only</h2><p>What is ${a} + ${b}?</p><input type="text" inputmode="numeric" id="ans" aria-label="answer" style="width:100px;text-align:center"><div class="row"><button class="btn teal" id="ok">Open</button><button class="btn white" id="no">Cancel</button></div></div>`;
+  document.body.appendChild(m);const inp=$('#ans',m);inp.focus();
+  const done=()=>m.remove();
+  const check=()=>{if(+inp.value===a+b){done();go('parent','dash')}else{inp.value='';inp.placeholder='Try again'}};
+  $('#ok',m).onclick=check;$('#no',m).onclick=done;inp.onkeydown=e=>{if(e.key==='Enter')check();if(e.key==='Escape')done()};
+};
+
+/* ---------- parent ---------- */
+function latest(){return S.assessments[S.assessments.length-1]}
+function suggestLevel(a){
+  if(!a)return null;const c=k=>a.scores[k].c;
+  if(c('A')<14)return {lv:1,why:`She knew ${c('A')} of 26 letter sounds. Start with first sounds.`};
+  if(c('B')<7||c('C')<3)return {lv:1,why:`Letter sounds are growing, but blending (${c('B')}/10) or splitting words into sounds (${c('C')}/5) is the next step. Stay on first sounds and do lots of robot talk.`};
+  if(c('D')<7||c('E')<3)return {lv:2,why:`She can blend aloud. Reading words on paper (${c('D')}/10) and silly words (${c('E')}/6) need practice.`};
+  if(c('D')>=9&&c('E')>=5)return {lv:4,why:'Reading simple words is secure. Move to sound pairs (sh, ch, th, ck, ng).'};
+  return {lv:3,why:'Simple words are going well. Cover all the letters and all five short vowels.'};
+}
+function pct(a,k){return Math.round(100*a.scores[k].c/a.scores[k].n)}
+function letterState(g){
+  const m=S.mastery[g];const a=latest();
+  if(m!=null)return m<=1?1:m<=3?2:3;
+  if(a&&a.items&&a.items.A&&a.items.A[g]){const v=a.items.A[g];return v==='ok'?3:v==='name'?2:1}
+  return 0;
+}
+R.parent=function(tab='dash'){
+  const tabs=[['dash','Progress'],['detect','Detective Day'],['voices','Voices'],['settings','Settings']];
+  app.innerHTML=`${topbar({parent:false})}<h2 style="margin-bottom:12px">Grown-ups</h2><div class="tabs" role="tablist">${tabs.map(([k,n])=>`<button class="tab ${k===tab?'on':''}" role="tab" data-act="ptab" data-t="${k}">${n}</button>`).join('')}</div><div id="pbody"></div>`;
+  P[tab]($('#pbody'));
+};
+const P={};
+P.dash=function(el){
+  const as=S.assessments,base=as[0],cur=latest(),sug=suggestLevel(cur);
+  const days={};S.sessions.forEach(s=>{days[s.d]=(days[s.d]||0)+s.total});
+  const last14=Array.from({length:14},(_,k)=>{const d=new Date(Date.now()-(13-k)*864e5).toISOString().slice(0,10);return [d,days[d]||0]});
+  const maxd=Math.max(5,...last14.map(x=>x[1]));
+  let streak=0;for(let k=13;k>=0;k--){if(last14[k][1]>0)streak++;else if(k===13)continue;else break}
+  const all=ALPHA.concat(DIGR);
+  el.innerHTML=`<div class="grid2">
+   <div class="card"><h3>Detective Day scores</h3>
+   ${!cur?'<p>No Detective Day yet. Do one to find where she is now. It takes about 15 minutes, in two sittings.</p><button class="btn teal" data-act="ptab" data-t="detect">Start Detective Day</button>':
+   `<p class="small muted">${base===cur?'Baseline: '+base.date:'Baseline '+base.date+' (yellow) and latest '+cur.date+' (green)'}</p>`+DETECTIVE.map(d=>`<div><b>${d.k}. ${d.title}</b> <span class="small">${cur.scores[d.k].c}/${d.n}${base!==cur?' (was '+base.scores[d.k].c+')':''}</span><div class="bar">${base!==cur?`<i class="base" style="width:${pct(base,d.k)}%"></i><i class="now" style="width:${pct(cur,d.k)}%"></i>`:`<i style="width:${pct(cur,d.k)}%"></i>`}</div></div>`).join('')+`<p class="small muted">Letters said by name only on the last check: ${cur.scores.A.name||0}.</p>`}
+   </div>
+   <div class="card"><h3>What to do next</h3>
+   ${sug?`<p>${esc(sug.why)}</p><p><b>Suggested level ${sug.lv}: ${LEVELS[sug.lv].name}.</b> Now set to level ${S.level}.</p>${sug.lv!==S.level?'<button class="btn teal" data-act="setlevel" data-lv="'+sug.lv+'">Use level '+sug.lv+'</button>':''}`:'<p>Do Detective Day first. Until then the app is on level '+S.level+' ('+LEVELS[S.level].name+').</p>'}
+   <p class="small muted mt">Re-do Detective Day every two weeks. Move up when she scores 8/10 on the level's checks.</p>
+   <div class="sum"><div><b>${S.stars}</b>stars</div><div><b>${S.sessions.length}</b>games played</div><div><b>${streak}</b>day streak</div></div></div>
+  </div>
+  <div class="card mt"><h3>Letter map</h3><div class="lmap">${all.map(g=>{const st=letterState(g);return `<div class="lcell s${st}" title="${g}">${g}<small>${st===3?'good':st===2?'ok':st===1?'learn':''}</small></div>`}).join('')}</div>
+   <p class="legend mt">Grey: not tried. Pink: still learning. Yellow: getting there. Green: good. Updates from the games and from Detective Day.</p></div>
+  <div class="card mt"><h3>Last 14 days (rounds played)</h3><div style="display:flex;align-items:flex-end;gap:6px;height:90px">${last14.map(([d,n])=>`<div title="${d}: ${n}" style="flex:1;background:${n?'var(--teal)':'#E4E8F5'};border:2px solid var(--ink);border-radius:6px 6px 0 0;height:${Math.max(4,Math.round(86*n/maxd))}px"></div>`).join('')}</div></div>`;
+};
+let DD=null;
+P.detect=function(el){
+  const hist=S.assessments;
+  el.innerHTML=`<div class="card"><h3>Detective Day</h3><p>Seven short checks. Tell her it is a game. Never say "test" and never show disappointment. Do it in two sittings of about 7 minutes.</p>
+  <div class="row" style="justify-content:flex-start"><button class="btn coral" data-act="dstart">${hist.length?'Start a new check':'Start the baseline'}</button></div></div>
+  ${hist.length?`<div class="card mt"><h3>History</h3>${hist.map((a,i)=>`<p><b>${a.date}</b>${i===0?' (baseline)':''}: ${DETECTIVE.map(d=>d.k+' '+a.scores[d.k].c+'/'+d.n).join(' &nbsp; ')}</p>`).join('')}</div>`:''}`;
+};
+function ddItems(){
+  return {A:shuffle(ALPHA),B:B_WORDS,C:C_WORDS,D:D_WORDS,E:E_WORDS,F:SIGHT.slice(0,10),G:G_PAIRS};
+}
+R.dstart=function(){DD={items:ddItems(),sec:0,i:0,res:{A:{},B:{},C:{},D:{},E:{},F:{},G:{}},out:0};screen='detect';ddRender()};
+function ddRender(){
+  const d=DETECTIVE[DD.sec];const n=d.n;const k=d.k;
+  if(DD.i>=n){DD.sec++;DD.i=0;if(DD.sec>=DETECTIVE.length)return ddFinish();return ddRender()}
+  const it=DD.items[k][DD.i];
+  let stim='',extra='',btns='';
+  if(k==='A'){stim=`<div class="big-letter word" style="font-size:150px">${it}</div>`;btns=`<button class="btn meadow" data-r="ok">✓ Sound</button><button class="btn" data-r="name">~ Name only</button><button class="btn white" data-r="no">✗ Not yet</button>`}
+  else if(k==='B'){const ph=phon(it);stim=`<div class="word">${ph.join(' · ')}</div>`;extra=`<button class="btn small teal" data-act="robot">🔊 Play robot voice</button>`;btns=`<button class="btn meadow" data-r="ok">✓ Said the word</button><button class="btn white" data-r="no">✗ Not yet</button>`}
+  else if(k==='C'){const ph=phon(it);stim=`<div class="word">${it}</div><p class="small">Sounds: ${ph.join(' / ')}</p>`;btns=`<button class="btn meadow" data-r="ok">✓ All the sounds</button><button class="btn white" data-r="no">✗ Not yet</button>`}
+  else if(k==='D'){stim=`<div class="word">${it}</div>`;btns=`<button class="btn meadow" data-r="out">✓ Sounded out</button><button class="btn teal" data-r="ok">✓ Knew it</button><button class="btn white" data-r="no">✗ Guessed or no</button>`}
+  else if(k==='E'||k==='F'){stim=`<div class="word">${it}</div>`;btns=`<button class="btn meadow" data-r="ok">✓ Read it</button><button class="btn white" data-r="no">✗ Not yet</button>`}
+  else if(k==='G'){stim=`<div class="prompt">Does <b>${it[0]}</b> rhyme with <b>${it[1]}</b>?</div><p>Right answer: <b>${it[2]?'Yes':'No'}</b></p>`;btns=`<button class="btn meadow" data-r="ok">✓ She was right</button><button class="btn white" data-r="no">✗ Wrong</button>`}
+  app.innerHTML=`${topbar({parent:false})}<div class="stage"><div class="prompt" style="margin:0"><b>${d.k}. ${d.title}</b> <span class="muted">${DD.i+1} of ${n}</span></div><p class="small">${d.ask}</p>${stim}<div class="row">${extra}</div><div class="row">${btns}</div>
+  <div class="row"><button class="btn small white" data-act="dback">Back</button><button class="btn small white" data-act="dskip">Skip this check</button><button class="btn small white" data-act="dquit">Quit</button></div></div>`;
+  if(k==='B')$('[data-act=robot]').onclick=()=>sayPhonemes(phon(it),null,300);
+  $$('[data-r]').forEach(b=>b.onclick=()=>{DD.res[k][DD.i]=b.dataset.r;DD.i++;ddRender()});
+}
+function ddFinish(){
+  const scores={},items={A:{}};
+  DETECTIVE.forEach(d=>{let c=0,name=0,out=0;for(let i=0;i<d.n;i++){const r=DD.res[d.k][i];if(r==='ok'||r==='out')c++;if(r==='name')name++;if(r==='out')out++}scores[d.k]={c,n:d.n,name,out}});
+  DD.items.A.forEach((g,i)=>{items.A[g]=DD.res.A[i]||'no'});
+  const a={date:today(),scores,items};S.assessments.push(a);
+  // seed letter mastery from the check
+  Object.entries(items.A).forEach(([g,v])=>{S.mastery[g]=v==='ok'?3:v==='name'?2:1});
+  save();DD=null;
+  const sug=suggestLevel(a);
+  app.innerHTML=`${topbar({parent:false})}<div class="stage"><div class="monster" aria-hidden="true">🕵️</div><h2>Detective Day done</h2>
+  <div class="sum">${DETECTIVE.map(d=>`<div><b>${scores[d.k].c}/${d.n}</b>${d.k}. ${d.title}</div>`).join('')}</div>
+  <p class="mt">${esc(sug.why)}</p><div class="row"><button class="btn teal" data-act="setlevel" data-lv="${sug.lv}">Use level ${sug.lv}</button><button class="btn white" data-act="gate">See progress</button></div></div>`;
+}
+let recState={busy:null,rec:null};
+const INSTR=[['how-pop','Pop','Listen to the sound. Tap the letter that says it.'],['how-robot','Robot','The robot says the sounds. Put them together. Tap the picture.'],['how-build','Build','Look at the picture. Tap the sounds in order to build the word.'],['how-magic','Magic','Change one letter to make a new word. Tap the letter that changes.'],['how-silly','Silly','Read the silly word. Tap the speaker to hear it sounded out.']];
+P.voices=function(el){
+  const all=ALPHA.concat(DIGR);const have=all.filter(g=>urls[g]).length;
+  el.innerHTML=`<div class="card"><h3>Record the sounds in your own voice</h3>
+  <p>${have} of ${all.length} letter sounds recorded. Each recording lasts about 1.5 seconds. Say only the sound, short and clipped: "sss", not "suh". Use the sound, not the name: c says "k", g says "g" as in goat, q says "kw", y says "y" as in yak. For the vowels use the short sounds: a (apple), e (egg), i (ink), o (octopus), u (umbrella). Without a recording, the computer says the picture word instead, which is a weaker clue.</p>
+  <p class="small muted">If the microphone is blocked, open this page with the Open Phonics Quest launcher (it uses localhost, so the browser remembers your choice).</p></div>
+  <div class="card mt"><h3>Say the instructions in your own voice</h3><p>Children follow instructions best in the language they know best. Record each one in Hindi, Telugu or English, up to 7 seconds. Tap the red button to start and the square to stop. If you skip these, the computer reads the English instruction.</p></div>
+  <div class="rec mt">${INSTR.map(([k,name,txt])=>`<div class="recrow" style="flex-wrap:wrap"><span class="st" style="min-width:100%"><b>${name}</b> <span class="muted">${txt}</span> <i>${urls[k]?'(recorded)':'(not yet)'}</i></span>
+    <button class="btn small coral" data-act="rec" data-g="${k}" data-ms="7000" aria-label="record ${name}">●</button>
+    <button class="btn small white" data-act="play" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="play ${name}">▶</button>
+    <button class="btn small white" data-act="del" data-g="${k}" ${urls[k]?'':'disabled'} aria-label="delete ${name}">✕</button></div>`).join('')}</div>
+  <div class="card mt"><h3>The letter sounds</h3></div>
+  <div class="rec mt">${all.map(g=>`<div class="recrow"><span class="t">${g}</span><span class="st">${urls[g]?'recorded':'not yet'} <span class="muted">(${KW[g][0]})</span></span>
+    <button class="btn small coral" data-act="rec" data-g="${g}" aria-label="record ${g}">●</button>
+    <button class="btn small white" data-act="play" data-g="${g}" ${urls[g]?'':'disabled'} aria-label="play ${g}">▶</button>
+    <button class="btn small white" data-act="del" data-g="${g}" ${urls[g]?'':'disabled'} aria-label="delete ${g}">✕</button></div>`).join('')}</div>`;
+};
+async function doRecord(g,btn,maxMs=1500){
+  if(recState.busy){if(recState.rec&&recState.rec.state!=='inactive')recState.rec.stop();return}
+  if(!navigator.mediaDevices||!window.MediaRecorder){alert('This browser cannot record. Use Chrome or Edge.');return}
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){alert('The microphone is blocked. Allow it in the address bar, or open the page with the launcher.');return}
+  recState.busy=g;btn.textContent=maxMs>2000?'■':'…';
+  const rec=new MediaRecorder(stream);const chunks=[];recState.rec=rec;
+  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});await putSound(g,blob);recState.busy=null;recState.rec=null;P.voices($('#pbody'));playRec(g)};
+  rec.start();setTimeout(()=>rec.state!=='inactive'&&rec.stop(),maxMs);
+}
+P.settings=function(el){
+  el.innerHTML=`<div class="card"><h3>Settings</h3>
+  <p><label>Child's name <input type="text" id="nm" value="${esc(S.child)}" maxlength="20"></label></p>
+  <p><label>Level <select id="lv">${[1,2,3,4].map(n=>`<option value="${n}" ${S.level===n?'selected':''}>${n}. ${LEVELS[n].name}</option>`).join('')}</select></label></p>
+  <div class="row" style="justify-content:flex-start"><button class="btn teal" data-act="savesettings">Save</button><button class="btn white" data-act="testvoice">Test computer voice</button></div></div>
+  <div class="card mt"><h3>Your data</h3><p class="small">Everything is stored only in this browser on this computer. Nothing is sent anywhere. Back it up from time to time.</p>
+  <div class="row" style="justify-content:flex-start"><button class="btn white" data-act="export">Download backup</button><label class="btn white">Restore backup<input type="file" id="imp" accept=".json" hidden></label><button class="btn coral" data-act="reset">Erase everything</button></div></div>`;
+  $('#imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d&&d.assessments){S=d;norm();save();alert('Restored.');go('parent','settings')}else alert('That file is not a Phonics Quest backup.')}catch(x){alert('Could not read that file.')}};
+};
+
+/* ---------- events ---------- */
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;const a=t.dataset.act;
+  if(a==='home')go('home');
+  else if(a==='gate')R.gate();
+  else if(a==='game')go(t.dataset.g);
+  else if(a==='ptab')go('parent',t.dataset.t);
+  else if(a==='setlevel'){S.level=+t.dataset.lv;save();go('parent','dash')}
+  else if(a==='dstart')R.dstart();
+  else if(a==='dback'){if(DD.i>0)DD.i--;else if(DD.sec>0){DD.sec--;DD.i=DETECTIVE[DD.sec].n-1}ddRender()}
+  else if(a==='dskip'){DD.sec++;DD.i=0;if(DD.sec>=DETECTIVE.length)ddFinish();else ddRender()}
+  else if(a==='dquit'){if(confirm('Quit without saving this check?')){DD=null;go('parent','detect')}}
+  else if(a==='snd')R.snd();
+  else if(a==='rec')doRecord(t.dataset.g,t,+(t.dataset.ms||1500));
+  else if(a==='play'){if(urls[t.dataset.g])playRec(t.dataset.g)}
+  else if(a==='del'){if(confirm('Delete this recording?')){await delSound(t.dataset.g);P.voices($('#pbody'))}}
+  else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;save();go('parent','settings')}
+  else if(a==='testvoice')speak('Hello! Let us read together.');
+  else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+  else if(a==='reset'){if(confirm('Erase all progress and stars? This cannot be undone.')){S={child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};norm();save();go('home')}}
+});
+loadSounds().then(()=>{});
+R.home();
+</script>
+</body>
+</html>
