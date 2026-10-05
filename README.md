@@ -30,3 +30,9 @@ then visit `http://localhost:8765/`. On Windows, `Open Phonics Quest.cmd` does t
 ## Notes
 - Sounds: until letter sounds are recorded, the computer voice is a weak substitute. Record them once for best results.
 - The computer voice cannot be louder than the device volume. Recorded voices can be boosted in the in-app sound panel.
+
+## If there is no sound on a phone
+1. Open the page in Chrome (Android) or Safari (iPhone), not inside WhatsApp or another chat app.
+2. Turn the media volume up; on an iPhone, switch the silent switch off.
+3. Tap the 🔊 button at the top of any screen: it shows how many recorded voices are on this device and whether the computer voice was found. Tap Test.
+4. Recordings made on a laptop do not exist on the phone. On the laptop: Grown-ups > Settings > Download backup (it includes the recorded voices). Send the file to the phone and use Restore backup there. On an iPhone, voices recorded in Chrome on a laptop may not play: record them on the phone itself.

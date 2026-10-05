@@ -202,7 +202,14 @@ function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en[-
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 const rate=()=>S.audio.speed==='slow'?0.62:0.85;
 function speak(text,r){return new Promise(res=>{if(!('speechSynthesis' in window)){res();return}
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);if(voice)u.voice=voice;u.lang=voice?voice.lang:'en-IN';u.rate=r||rate();u.pitch=1.05;u.volume=1;u.onend=()=>res();u.onerror=()=>res();speechSynthesis.speak(u);setTimeout(res,6000)}catch(e){res()}})}
+  try{speechSynthesis.cancel();try{speechSynthesis.resume()}catch(e){}const u=new SpeechSynthesisUtterance(text);if(voice){u.voice=voice;u.lang=voice.lang}u.rate=r||rate();u.pitch=1.05;u.volume=1;u.onend=()=>res();u.onerror=()=>res();
+    setTimeout(()=>{try{speechSynthesis.speak(u)}catch(e){res()}},80);setTimeout(res,6000)}catch(e){res()}})}
+/* phones only allow sound after a tap: unlock both the recorded-voice engine and the computer voice on the first touch */
+let unlocked=false;
+function unlockAudio(){if(unlocked)return;unlocked=true;
+  try{const c=ac();const b=c.createBuffer(1,1,22050);const src=c.createBufferSource();src.buffer=b;src.connect(c.destination);src.start(0)}catch(e){}
+  try{if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}}catch(e){}}
+['pointerdown','touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
 /* single sounds: spoken respelling is only a fallback until the grown-up records real sounds */
 const RESP={a:'ah',b:'buh',c:'kuh',d:'duh',e:'eh',f:'fff',g:'guh',h:'huh',i:'ih',j:'juh',k:'kuh',l:'lll',m:'mmm',n:'nnn',o:'aw',p:'puh',q:'kwuh',r:'rrr',s:'sss',t:'tuh',u:'uh',v:'vvv',w:'wuh',x:'ks',y:'yuh',z:'zzz',sh:'shhh',ch:'chuh',th:'thhh',ck:'kuh',ng:'ng'};
 const heard=new Set();
@@ -518,7 +525,8 @@ R.snd=function(){
   m.innerHTML=`<div class="card"><h2>Sound</h2><p>Loudness of the recorded voice</p><input type="range" id="vol" min="1" max="3" step="0.25" value="${S.audio.vol}" style="width:100%" aria-label="Loudness"><p>Speed</p>
   <div class="row" style="margin-top:0"><button class="btn small ${S.audio.speed==='slow'?'teal':'white'}" data-sp="slow">🐢 Slow</button><button class="btn small ${S.audio.speed==='normal'?'teal':'white'}" data-sp="normal">🐇 Normal</button></div>
   <div class="row"><button class="btn coral" id="tst">🔊 Test</button><button class="btn white" id="cls">Done</button></div>
-  <p class="small muted">The computer voice cannot be louder than the computer's own volume. Turn that up as well.</p></div>`;
+  <p class="small">Recorded voices on this device: <b>${Object.keys(urls).length}</b>. Computer voice: <b>${voice?esc(voice.name):'none found on this device'}</b>.</p>
+  <p class="small muted">The computer voice cannot be louder than the device's own volume. Turn the media volume up, and on an iPhone make sure the silent switch is off. Open this page in Chrome or Safari, not inside a chat app.</p></div>`;
   document.body.appendChild(m);
   const test=()=>{const g=ALPHA.concat(DIGR).find(x=>urls[x]);if(g)playRec(g);else speak('Can you hear me?')};
   $('#vol',m).oninput=e=>{S.audio.vol=+e.target.value;save();if(master)master.gain.value=S.audio.vol};
@@ -622,6 +630,8 @@ function ddFinish(){
   <div class="sum">${DETECTIVE.map(d=>`<div><b>${scores[d.k].c}/${d.n}</b>${d.k}. ${d.title}</div>`).join('')}</div>
   <p class="mt">${esc(sug.why)}</p><div class="row"><button class="btn teal" data-act="setlevel" data-lv="${sug.lv}">Use level ${sug.lv}</button><button class="btn white" data-act="gate">See progress</button></div></div>`;
 }
+function blobToData(b){return new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}
+async function dataToBlob(d){return (await fetch(d)).blob()}
 let recState={busy:null,rec:null};
 const INSTR=[['how-pop','Pop','Listen to the sound. Tap the letter that says it.'],['how-robot','Robot','The robot says the sounds. Put them together. Tap the picture.'],['how-build','Build','Look at the picture. Tap the sounds in order to build the word.'],['how-magic','Magic','Change one letter to make a new word. Tap the letter that changes.'],['how-silly','Silly','Read the silly word. Tap the speaker to hear it sounded out.']];
 P.voices=function(el){
@@ -662,9 +672,9 @@ P.settings=function(el){
   <p><label><input type="checkbox" id="ml" ${S.matchLearned?'checked':''}> Games use only the sounds she has learned (once she has learned 4)</label></p>
   <p class="small muted">Sounds learned so far: ${Object.keys(S.learned).length} of ${ALLG.length}.</p>
   <div class="row" style="justify-content:flex-start"><button class="btn teal" data-act="savesettings">Save</button><button class="btn white" data-act="testvoice">Test computer voice</button></div></div>
-  <div class="card mt"><h3>Your data</h3><p class="small">Everything is stored only in this browser on this computer. Nothing is sent anywhere. Back it up from time to time.</p>
+  <div class="card mt"><h3>Your data</h3><p class="small">Everything is stored only in this browser on this device. Nothing is sent anywhere. The backup file includes your recorded voices, so you can move everything to a phone: download the backup here, send it to the phone, and use Restore backup there.</p>
   <div class="row" style="justify-content:flex-start"><button class="btn white" data-act="export">Download backup</button><label class="btn white">Restore backup<input type="file" id="imp" accept=".json" hidden></label><button class="btn coral" data-act="reset">Erase everything</button></div></div>`;
-  $('#imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d&&d.assessments){S=d;norm();save();alert('Restored.');go('parent','settings')}else alert('That file is not a Phonics Quest backup.')}catch(x){alert('Could not read that file.')}};
+  $('#imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d&&d.assessments){const snd=d._sounds||{};delete d._sounds;S=d;norm();save();for(const k of Object.keys(snd)){try{await putSound(k,await dataToBlob(snd[k]))}catch(e){}}alert('Restored'+(Object.keys(snd).length?' with '+Object.keys(snd).length+' recorded voices':'')+'.');go('parent','settings')}else alert('That file is not a Phonics Quest backup.')}catch(x){alert('Could not read that file.')}};
 };
 
 /* ---------- events ---------- */
@@ -687,7 +697,7 @@ document.addEventListener('click',async e=>{
   else if(a==='del'){if(confirm('Delete this recording?')){await delSound(t.dataset.g);P.voices($('#pbody'))}}
   else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;S.matchLearned=$('#ml').checked;save();go('parent','settings')}
   else if(a==='testvoice')speak('Hello! Let us read together.');
-  else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+  else if(a==='export'){const snd={};for(const k of Object.keys(urls))snd[k]=await blobToData(urls[k]);const b=new Blob([JSON.stringify(Object.assign({},S,{_sounds:snd}))],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
   else if(a==='reset'){if(confirm('Erase all progress and stars? This cannot be undone.')){S={child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};norm();save();go('home')}}
 });
 loadSounds().then(()=>{});
