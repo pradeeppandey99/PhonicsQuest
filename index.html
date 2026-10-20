@@ -206,7 +206,12 @@ async function loadSounds(){
     const on=new Set((await r.json()).keys||[]);
     for(const k of on){if(!urls[k]){try{const rr=await fetch('/api/sounds/'+k,{cache:'no-store'});if(rr.ok){const b=await rr.blob();urls[k]=b;try{await dbOp('readwrite',st=>st.put(b,k))}catch(e){}}}catch(e){}}}
     for(const k of Object.keys(urls)){if(!on.has(k))await srvPost(k,urls[k])}
+    return;
   }}catch(e){}
+  /* no local server (GitHub Pages, a phone): fill in anything missing from the published sounds/ folder */
+  try{const r=await fetch('sounds/manifest.json',{cache:'no-cache'});if(!r.ok)return;const m=await r.json();
+    for(const k of Object.keys(m)){if(urls[k]||!m[k]||!m[k].file)continue;try{const rr=await fetch('sounds/'+m[k].file,{cache:'no-cache'});if(rr.ok){const b=await rr.blob();urls[k]=b;try{await dbOp('readwrite',st=>st.put(b,k))}catch(e){}}}catch(e){}}
+  }catch(e){}
 }
 async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k];srvPost(k,blob)}
 async function delSound(k){await dbOp('readwrite',st=>st.delete(k));delete urls[k];delete bufs[k];fetch('/api/sounds/'+k,{method:'DELETE'}).catch(()=>{})}
