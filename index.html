@@ -198,9 +198,18 @@ function cancelAudio(){epoch++;stopRec();try{speechSynthesis.cancel()}catch(e){}
 function playRec(k){return new Promise(async res=>{try{const c=ac();const b=await bufFor(k);stopRec();try{speechSynthesis.cancel()}catch(e){}const src=c.createBufferSource();src.buffer=b;src.connect(master);src.onended=()=>res();curSrc=src;src.start();setTimeout(res,b.duration*1000+400)}catch(e){res()}})}
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('phonicsQuestSounds',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function dbOp(mode,fn){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('s',mode);const st=tx.objectStore('s');const rq=fn(st);tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)})}
-async function loadSounds(){try{const keys=await dbOp('readonly',st=>st.getAllKeys());for(const k of keys){const b=await dbOp('readonly',st=>st.get(k));if(b)urls[k]=b}}catch(e){}}
-async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k]}
-async function delSound(k){await dbOp('readwrite',st=>st.delete(k));delete urls[k];delete bufs[k]}
+/* Recordings are also kept on disk by server.py (folder "sounds"), so clearing the browser loses nothing. On GitHub Pages or any plain web server there is no /api, and these calls quietly do nothing. */
+const srvPost=(k,blob)=>fetch('/api/sounds/'+k,{method:'POST',headers:{'Content-Type':blob.type||'audio/webm'},body:blob}).catch(()=>{});
+async function loadSounds(){
+  try{const keys=await dbOp('readonly',st=>st.getAllKeys());for(const k of keys){const b=await dbOp('readonly',st=>st.get(k));if(b)urls[k]=b}}catch(e){}
+  try{const r=await fetch('/api/sounds',{cache:'no-store'});if(r.ok&&/json/.test(r.headers.get('content-type')||'')){
+    const on=new Set((await r.json()).keys||[]);
+    for(const k of on){if(!urls[k]){try{const rr=await fetch('/api/sounds/'+k,{cache:'no-store'});if(rr.ok){const b=await rr.blob();urls[k]=b;try{await dbOp('readwrite',st=>st.put(b,k))}catch(e){}}}catch(e){}}}
+    for(const k of Object.keys(urls)){if(!on.has(k))await srvPost(k,urls[k])}
+  }}catch(e){}
+}
+async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k];srvPost(k,blob)}
+async function delSound(k){await dbOp('readwrite',st=>st.delete(k));delete urls[k];delete bufs[k];fetch('/api/sounds/'+k,{method:'DELETE'}).catch(()=>{})}
 let voice=null;
 function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en[-_]IN/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null}
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
@@ -716,7 +725,7 @@ document.addEventListener('click',async e=>{
   else if(a==='export'){const snd={};for(const k of Object.keys(urls))snd[k]=await blobToData(urls[k]);const b=new Blob([JSON.stringify(Object.assign({},S,{_sounds:snd}))],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
   else if(a==='reset'){if(confirm('Erase all progress and stars? This cannot be undone.')){S={child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};norm();save();go('home')}}
 });
-loadSounds().then(()=>{});
+loadSounds().then(()=>{if(typeof screen!=='undefined'&&screen==='home')R.home()});
 R.home();
 </script>
 </body>

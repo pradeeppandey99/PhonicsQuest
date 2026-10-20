@@ -23,7 +23,7 @@ A short lesson teaches new sounds before they are tested, two at a time: meet th
 ## Run it
 Open `index.html` through a local server (the microphone and saved progress work best that way):
 
-    python -m http.server 8766
+    python server.py 8766
 
 then visit `http://localhost:8766/`. On Windows, `Open Phonics Quest.cmd` does this.
 
@@ -36,3 +36,7 @@ then visit `http://localhost:8766/`. On Windows, `Open Phonics Quest.cmd` does t
 2. Turn the media volume up; on an iPhone, switch the silent switch off.
 3. Tap the 🔊 button at the top of any screen: it shows how many recorded voices are on this device and whether the computer voice was found. Tap Test.
 4. Recordings made on a laptop do not exist on the phone. On the laptop: Grown-ups > Settings > Download backup (it includes the recorded voices). Send the file to the phone and use Restore backup there. On an iPhone, voices recorded in Chrome on a laptop may not play: record them on the phone itself.
+
+## Recordings are saved on disk (added 20 Oct 2026)
+
+`server.py` (started by `Open Phonics Quest.cmd`) keeps every recorded voice in the `sounds/` folder next to the app, in addition to the browser. Clearing the browser loses nothing: the page reloads the recordings from disk on start. Opening the page for the first time after an upgrade copies any recordings already in the browser to `sounds/`. `sounds/` is in `.gitignore`, so the recordings are never pushed to the public repo. On GitHub Pages (no server) the app works as before, with recordings in that browser only; use Download backup and Restore backup to move them to a phone.
