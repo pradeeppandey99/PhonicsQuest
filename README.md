@@ -23,9 +23,9 @@ A short lesson teaches new sounds before they are tested, two at a time: meet th
 ## Run it
 Open `index.html` through a local server (the microphone and saved progress work best that way):
 
-    python -m http.server 8765
+    python -m http.server 8766
 
-then visit `http://localhost:8765/`. On Windows, `Open Phonics Quest.cmd` does this.
+then visit `http://localhost:8766/`. On Windows, `Open Phonics Quest.cmd` does this.
 
 ## Notes
 - Sounds: until letter sounds are recorded, the computer voice is a weak substitute. Record them once for best results.
