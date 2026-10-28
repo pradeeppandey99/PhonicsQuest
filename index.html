@@ -42,7 +42,7 @@ h2{font-size:clamp(26px,4vw,38px)}
 .g6{background:#FF7EB6}
 .actxt{font-size:26px;font-weight:700;max-width:640px;margin:6px auto 14px}
 .ph1{color:var(--coral)}
-.g1{background:var(--coral);color:#fff}.g2{background:var(--teal);color:#fff}.g3{background:var(--yellow)}.g4{background:var(--grape);color:#fff}.g5{background:var(--meadow)}
+.g7{background:#3B82F6;color:#fff}.g1{background:var(--coral);color:#fff}.g2{background:var(--teal);color:#fff}.g3{background:var(--yellow)}.g4{background:var(--grape);color:#fff}.g5{background:var(--meadow)}
 .stickers{margin-top:30px;background:var(--white);border:4px solid var(--ink);border-radius:24px;padding:12px 18px;box-shadow:0 6px 0 var(--ink);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .stickers .row{font-size:40px;letter-spacing:6px}
 .card{background:var(--white);border:4px solid var(--ink);border-radius:24px;box-shadow:0 6px 0 var(--ink);padding:18px 22px}
@@ -150,7 +150,7 @@ const DETECTIVE=[
  {k:'F',title:'Common words',n:10,ask:'Show the word. Ask her to read it.'},
  {k:'G',title:'Rhymes',n:5,ask:'Ask the question out loud. The right answer is shown.'}
 ];
-const B_WORDS=['cat','sun','pin','hen','mug','dog','bed','lip','top','bus'];
+const B_WORDS=['me','sun','mug','lip','pin','cat','hen','dog','bed','top']; /* easy to hard: two sounds, sounds you can stretch, then popping first sounds */
 const C_WORDS=['sun','pig','bed','map','bus'];
 const D_WORDS=['mat','sit','hop','red','tub','jam','fin','cot','web','nap'];
 const E_WORDS=['zat','mip','dup','hep','lom','yib'];
@@ -168,7 +168,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function phon(w){const out=[];for(let i=0;i<w.length;){const two=w.slice(i,i+2);if(DIGR.includes(two)){out.push(two);i+=2}else{out.push(w[i]);i++}}return out}
 const KEY='phonicsQuest.v1';
 let S=(function(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}})()||{child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};
-function norm(){S.audio=Object.assign({vol:2,speed:'slow'},S.audio||{});S.seen=S.seen||{};S.learned=S.learned||{};if(S.matchLearned===undefined)S.matchLearned=true}
+function norm(){S.blend=S.blend||{stage:0};S.wmiss=S.wmiss||{};S.audio=Object.assign({vol:2,speed:'slow'},S.audio||{});S.seen=S.seen||{};S.learned=S.learned||{};if(S.matchLearned===undefined)S.matchLearned=true}
 norm();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const today=()=>new Date().toISOString().slice(0,10);
@@ -182,6 +182,11 @@ function pickNS(){const A=avail();const ws=[].concat(...Object.values(NSW)).filt
 function wpick(list,n){ // weighted by weakness, no repeats
   const out=[];let rest=list.slice();
   while(out.length<n&&rest.length){const w=rest.map(g=>6-mast(g));const tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot,i=0;for(;i<rest.length;i++){r-=w[i];if(r<=0)break}i=Math.min(i,rest.length-1);out.push(rest[i]);rest.splice(i,1)}
+  return out;
+}
+function wpickWords(list,n){ // picture words weighted by weak sounds and by words she missed
+  const out=[];let rest=list.slice();
+  while(out.length<n&&rest.length){const w=rest.map(x=>{const ph=phon(x.w);const weak=ph.reduce((a,g)=>a+(6-mast(g)),0)/ph.length;return 1+weak+2*(S.wmiss[x.w]||0)});const tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot,i=0;for(;i<rest.length;i++){r-=w[i];if(r<=0)break}i=Math.min(i,rest.length-1);out.push(rest[i]);rest.splice(i,1)}
   return out;
 }
 function picWords(){const A=avail();if(A!==LEVELS[S.level].letters){const ok=PW.filter(p=>okWord(p.w,A));if(ok.length>=3)return ok}const L=S.level;let ws=PW.filter(p=>p.lv<=L);if(L===4)ws=ws.filter(p=>p.lv===4).concat(shuffle(ws.filter(p=>p.lv<4)).slice(0,4));return ws}
@@ -213,7 +218,7 @@ async function loadSounds(){
     for(const k of Object.keys(m)){if(urls[k]||!m[k]||!m[k].file)continue;try{const rr=await fetch('sounds/'+m[k].file,{cache:'no-cache'});if(rr.ok){const b=await rr.blob();urls[k]=b;try{await dbOp('readwrite',st=>st.put(b,k))}catch(e){}}}catch(e){}}
   }catch(e){}
 }
-async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k];srvPost(k,blob)}
+async function putSound(k,blob){await dbOp('readwrite',st=>st.put(blob,k));urls[k]=blob;delete bufs[k];if(typeof trims!=='undefined')delete trims[k];srvPost(k,blob)}
 async function delSound(k){await dbOp('readwrite',st=>st.delete(k));delete urls[k];delete bufs[k];fetch('/api/sounds/'+k,{method:'DELETE'}).catch(()=>{})}
 let voice=null;
 function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/en[-_]IN/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null}
@@ -244,6 +249,19 @@ async function sayPhonemes(list,hl,gap,word){
   const sp=speak(word||list.join(''),.4);
   for(let i=0;i<list.length;i++){if(epoch!==my)return;hl&&hl(i,true);await sleep(S.audio.speed==='slow'?800:550);hl&&hl(i,false)}
   await sp;
+}
+/* Blending: trim the silence off each recorded sound so sounds can be joined with a small, shrinking gap (down to none). */
+const trims={};
+async function trimFor(k){if(trims[k])return trims[k];const b=await bufFor(k);const d=b.getChannelData(0);let mx=0;for(let i=0;i<d.length;i++){const v=Math.abs(d[i]);if(v>mx)mx=v}
+  const th=Math.max(0.02,mx*0.08);let s=0,e=d.length-1;while(s<e&&Math.abs(d[s])<th)s++;while(e>s&&Math.abs(d[e])<th)e--;
+  const pad=Math.round(b.sampleRate*0.03);s=Math.max(0,s-pad);e=Math.min(d.length-1,e+pad);
+  return trims[k]={start:s/b.sampleRate,dur:Math.max(0.12,(e-s)/b.sampleRate)}}
+function playTight(k){return new Promise(async res=>{try{const c=ac();const b=await bufFor(k);const tr=await trimFor(k);const src=c.createBufferSource();src.buffer=b;src.connect(master);curSrc=src;src.onended=()=>res();src.start(0,tr.start,tr.dur);setTimeout(res,tr.dur*1000+300)}catch(e){res()}})}
+async function sayBlend(list,hl,gap,word){
+  const my=epoch;
+  if(!list.every(g=>urls[g]))return sayPhonemes(list,hl,Math.max(gap||0,300),word);
+  stopRec();try{speechSynthesis.cancel()}catch(e){}
+  for(let i=0;i<list.length;i++){if(epoch!==my)return;hl&&hl(i,true);await playTight(list[i]);hl&&hl(i,false);if(epoch!==my)return;if(gap>0)await sleep(gap)}
 }
 async function sayHow(name){const k='how-'+name;if(urls[k])return playRec(k);return speak(HOW[name].say)}
 
@@ -277,6 +295,7 @@ R.home=function(){
   <div class="hero"><div class="mascot" aria-hidden="true">🦜</div><div><h1>Phonics Quest</h1><div class="hello">Hi ${nm}! Pick a game.</div></div></div>
   <div class="games">
     <button class="game g6" data-act="learn"><span class="ic" aria-hidden="true">🌟</span><b>Learn</b><span>${learnNext(2).length?'New sounds: '+learnNext(2).join(', '):'Practise any sound.'}</span></button>
+    <button class="game g7" data-act="game" data-g="blend"><span class="ic" aria-hidden="true">🧩</span><b>Blend</b><span>Slide the sounds into a word.</span></button>
     <button class="game g1" data-act="game" data-g="pop"><span class="ic" aria-hidden="true">🎈</span><b>Pop</b><span>Hear a sound. Pop the letter.</span></button>
     <button class="game g2" data-act="game" data-g="robot"><span class="ic" aria-hidden="true">🤖</span><b>Robot</b><span>Robot says the sounds. Find the picture.</span></button>
     <button class="game g3" data-act="game" data-g="build"><span class="ic" aria-hidden="true">🧱</span><b>Build</b><span>Put the sounds in the boxes.</span></button>
@@ -291,6 +310,7 @@ R.home=function(){
 const HOW={
   pop:{say:'Listen to the sound. Tap the letter that says it.',pict:'👂 ➜ 👆'},
   robot:{say:'The robot says the sounds. Put them together. Tap the picture.',pict:'🤖 ➜ 🖼️👆'},
+  blend:{say:'Listen to the sounds. Slide them together into a word. Tap the picture.',pict:'🤖 ➜ 🖼️👆'},
   build:{say:'Look at the picture. Tap the sounds in order to build the word.',pict:'🖼️ ➜ 🔤👆'},
   magic:{say:'Change one letter to make a new word. Tap the letter that changes.',pict:'✏️ ➜ 🔤'},
   silly:{say:'Read the silly word. Tap the speaker to hear it sounded out.',pict:'👾 ➜ 🗣️'}
@@ -344,7 +364,7 @@ R.pop=async function(){
 /* ---------- 2. Robot Talk ---------- */
 R.robot=async function(){
   heard.clear();
-  const all=picWords();const N=6;const items=shuffle(all).slice(0,Math.min(N,all.length));let i=0,right=0;
+  const all=picWords();const N=6;const items=wpickWords(all,Math.min(N,all.length));let i=0,right=0;
   async function round(){
     if(i>=items.length)return endScreen('robot',right,items.length);
     const it=items[i];const ph=phon(it.w);let tries=0;
@@ -357,13 +377,53 @@ R.robot=async function(){
     <div class="pics mt">${opts.map(o=>`<button class="pic" data-w="${o.w}" aria-label="picture choice">${o.em}</button>`).join('')}</div></div>`;
     bindHow('robot');
     const hl=(k,on)=>{const t=$$('#rt .tile')[k];if(t)t.classList.toggle('lit',on)};
-    const say=()=>{cancelAudio();return sayPhonemes(ph,hl,0,it.w)};
+    const say=()=>{cancelAudio();return sayBlend(ph,hl,S.audio.speed==='slow'?400:250,it.w)};
     if(i===0&&guided('robot'))hint($(`.pic[data-w="${it.w}"]`));
     {const my=epoch;(async()=>{if(i===0){await sayHow('robot');await sleep(300)}if(epoch===my)say()})()}
     $('[data-act=again]').onclick=say;
     $$('.pic').forEach(b=>b.onclick=async()=>{
-      if(b.dataset.w===it.w){cancelAudio();$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
-      else{tries++;b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
+      if(b.dataset.w===it.w){cancelAudio();$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));S.wmiss[it.w]=Math.max(0,(S.wmiss[it.w]||0)-1);save();await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
+      else{tries++;if(tries===1){S.wmiss[it.w]=(S.wmiss[it.w]||0)+1;save()}b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
+    });
+  }
+  round();
+};
+
+/* ---------- 2b. Blend: joining sounds into a word, in four steps ---------- */
+const BSTEPS=[
+ {name:'Two sounds',gap:300,show:false,words:[['me','🙋'],['no','🚫'],['go','🟢'],['up','⬆️'],['on','🔛'],['ox','🐂']]},
+ {name:'Sounds you can stretch',gap:150,show:false,words:[['sun','☀️'],['man','👨'],['map','🗺️'],['nut','🥜'],['net','🥅'],['mug','☕'],['leg','🦵'],['lip','👄'],['fox','🦊'],['nap','😴'],['sad','😢'],['ant','🐜']]},
+ {name:'Short words with a popping first sound',gap:60,show:true,words:[['pin','📌'],['tap','🚰'],['pan','🍳'],['cat','🐱'],['cap','🧢'],['pig','🐷'],['kid','🧒'],['hat','🎩'],['bat','🦇'],['bus','🚌'],['bug','🐛'],['dog','🐶']]},
+ {name:'Popping sounds, no gap',gap:0,show:true,words:[['bed','🛏️'],['pen','🖊️'],['hen','🐔'],['web','🕸️'],['jet','✈️'],['log','🪵'],['box','📦'],['rat','🐀'],['dig','⛏️'],['hop','🐇'],['tub','🛁']]}
+];
+function blendStageFor(b){return b<=1?0:b<=3?1:b<=6?2:3}
+R.blend=async function(){
+  heard.clear();
+  const st=clamp(S.blend.stage||0,0,3),step=BSTEPS[st];
+  const items=wpickWords(step.words.map(([w,em])=>({w,em})),6);let i=0,right=0;
+  async function round(){
+    if(i>=items.length){
+      /* move up after 5 of 6 first time, step back after 2 or fewer */
+      if(right>=5&&st<3)S.blend.stage=st+1;else if(right<=2&&st>0)S.blend.stage=st-1;save();
+      return endScreen('blend',right,items.length)}
+    const it=items[i];const ph=phon(it.w);let tries=0,gap=step.gap;
+    const wrong=[];for(const p of shuffle(step.words)){if(p[0]!==it.w&&p[1]!==it.em&&!wrong.some(x=>x.em===p[1])){wrong.push({w:p[0],em:p[1]});if(wrong.length===(st===0?1:2))break}}
+    const opts=shuffle([it].concat(wrong));
+    app.innerHTML=`${topbar()}<div class="stage">${dots(i,items.length)}${howBar('blend')}
+    <div class="prompt">Listen. Slide the sounds together. What word is it?</div>
+    ${step.show?`<div class="tiles" id="rt">${ph.map(g=>`<span class="tile sm ${kind(g)}" style="cursor:default">${g}</span>`).join('')}</div>`:'<div id="rt"></div>'}
+    <div class="row"><button class="btn teal" data-act="again">🔊 Say it again</button></div>
+    <div class="pics mt">${opts.map(o=>`<button class="pic" data-w="${o.w}" aria-label="picture choice">${o.em}</button>`).join('')}</div>
+    <p class="small muted mt">Step ${st+1} of 4: ${step.name}</p></div>`;
+    bindHow('blend');
+    const hl=(k,on)=>{const t=$$('#rt .tile')[k];if(t)t.classList.toggle('lit',on)};
+    const say=()=>{cancelAudio();return sayBlend(ph,hl,gap,it.w)};
+    if(i===0&&guided('blend'))hint($(`.pic[data-w="${it.w}"]`));
+    {const my=epoch;(async()=>{if(i===0){await sayHow('blend');await sleep(300)}if(epoch===my)say()})()}
+    $('[data-act=again]').onclick=say;
+    $$('.pic').forEach(b=>b.onclick=async()=>{
+      if(b.dataset.w===it.w){cancelAudio();$$('.pic').forEach(x=>x.onclick=null);unhint();b.classList.add('ok');burst(b);if(tries===0){right++;ph.forEach(g=>bump(g,true));S.wmiss[it.w]=Math.max(0,(S.wmiss[it.w]||0)-1);save();await cheer('ok')}nextBar(it.w,()=>{i++;round()},true)}
+      else{tries++;if(tries===1){S.wmiss[it.w]=(S.wmiss[it.w]||0)+1;save()}gap=Math.floor(gap*0.4);b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400);await sleep(250);say()}
     });
   }
   round();
@@ -580,8 +640,10 @@ R.gate=function(){
 function latest(){return S.assessments[S.assessments.length-1]}
 function suggestLevel(a){
   if(!a)return null;const c=k=>a.scores[k].c;
-  if(c('A')<14)return {lv:1,why:`She knew ${c('A')} of 26 letter sounds. Start with first sounds.`};
-  if(c('B')<7||c('C')<3)return {lv:1,why:`Letter sounds are growing, but blending (${c('B')}/10) or splitting words into sounds (${c('C')}/5) is the next step. Stay on first sounds and do lots of robot talk.`};
+  const bs=blendStageFor(c('B'));
+  if(c('A')<10)return {lv:1,why:`She knew ${c('A')} of 26 letter sounds. Start with first sounds, and play Blend at step 1 alongside.`,blend:0};
+  if(c('B')<7)return {lv:c('A')>=20?2:1,blend:bs,why:`She knew ${c('A')} of 26 letter sounds, so the sounds are not the gap: joining them is (blending ${c('B')}/10). Play Blend for 5 minutes a day, starting at step ${bs+1} (${BSTEPS[bs].name}). Move up when she gets 5 of 6 first time. Add new letters slowly.`};
+  if(c('C')<3)return {lv:2,why:`Blending is secure (${c('B')}/10). Splitting a word into its sounds (${c('C')}/5) is next: play Build and Robot.`};
   if(c('D')<7||c('E')<3)return {lv:2,why:`She can blend aloud. Reading words on paper (${c('D')}/10) and silly words (${c('E')}/6) need practice.`};
   if(c('D')>=9&&c('E')>=5)return {lv:4,why:'Reading simple words is secure. Move to sound pairs (sh, ch, th, ck, ng).'};
   return {lv:3,why:'Simple words are going well. Cover all the letters and all five short vowels.'};
@@ -612,7 +674,7 @@ P.dash=function(el){
    `<p class="small muted">${base===cur?'Baseline: '+base.date:'Baseline '+base.date+' (yellow) and latest '+cur.date+' (green)'}</p>`+DETECTIVE.map(d=>`<div><b>${d.k}. ${d.title}</b> <span class="small">${cur.scores[d.k].c}/${d.n}${base!==cur?' (was '+base.scores[d.k].c+')':''}</span><div class="bar">${base!==cur?`<i class="base" style="width:${pct(base,d.k)}%"></i><i class="now" style="width:${pct(cur,d.k)}%"></i>`:`<i style="width:${pct(cur,d.k)}%"></i>`}</div></div>`).join('')+`<p class="small muted">Letters said by name only on the last check: ${cur.scores.A.name||0}.</p>`}
    </div>
    <div class="card"><h3>What to do next</h3>
-   ${sug?`<p>${esc(sug.why)}</p><p><b>Suggested level ${sug.lv}: ${LEVELS[sug.lv].name}.</b> Now set to level ${S.level}.</p>${sug.lv!==S.level?'<button class="btn teal" data-act="setlevel" data-lv="'+sug.lv+'">Use level '+sug.lv+'</button>':''}`:'<p>Do Detective Day first. Until then the app is on level '+S.level+' ('+LEVELS[S.level].name+').</p>'}
+   ${sug?`<p>${esc(sug.why)}</p><p><b>Suggested level ${sug.lv}: ${LEVELS[sug.lv].name}.</b> Now set to level ${S.level}.</p>${sug.lv!==S.level?'<button class="btn teal" data-act="setlevel" data-lv="'+sug.lv+'">Use level '+sug.lv+'</button>':''}${sug.blend!=null?`<p class="mt"><b>Blend step ${sug.blend+1}: ${BSTEPS[sug.blend].name}.</b> Now set to step ${S.blend.stage+1}.</p>${sug.blend!==S.blend.stage?'<button class="btn teal" data-act="setblend" data-b="'+sug.blend+'">Use Blend step '+(sug.blend+1)+'</button>':''}`:''}`:'<p>Do Detective Day first. Until then the app is on level '+S.level+' ('+LEVELS[S.level].name+').</p>'}
    <p class="small muted mt">Re-do Detective Day every two weeks. Move up when she scores 8/10 on the level's checks.</p>
    <div class="sum"><div><b>${S.stars}</b>stars</div><div><b>${S.sessions.length}</b>games played</div><div><b>${streak}</b>day streak</div><div><b>${Object.keys(S.learned).length}</b>sounds learned</div></div></div>
   </div>
@@ -652,6 +714,7 @@ function ddFinish(){
   DETECTIVE.forEach(d=>{let c=0,name=0,out=0;for(let i=0;i<d.n;i++){const r=DD.res[d.k][i];if(r==='ok'||r==='out')c++;if(r==='name')name++;if(r==='out')out++}scores[d.k]={c,n:d.n,name,out}});
   DD.items.A.forEach((g,i)=>{items.A[g]=DD.res.A[i]||'no'});
   const a={date:today(),scores,items};S.assessments.push(a);
+  if(scores.B.c<7)S.blend.stage=blendStageFor(scores.B.c);
   // seed letter mastery from the check
   Object.entries(items.A).forEach(([g,v])=>{S.mastery[g]=v==='ok'?3:v==='name'?2:1;if(v==='ok')S.learned[g]=true});
   save();DD=null;
@@ -699,6 +762,7 @@ P.settings=function(el){
   el.innerHTML=`<div class="card"><h3>Settings</h3>
   <p><label>Child's name <input type="text" id="nm" value="${esc(S.child)}" maxlength="20"></label></p>
   <p><label>Level <select id="lv">${[1,2,3,4].map(n=>`<option value="${n}" ${S.level===n?'selected':''}>${n}. ${LEVELS[n].name}</option>`).join('')}</select></label></p>
+  <p><label>Blend step <select id="bs">${BSTEPS.map((s,k)=>`<option value="${k}" ${S.blend.stage===k?'selected':''}>${k+1}. ${s.name}</option>`).join('')}</select></label></p>
   <p><label><input type="checkbox" id="ml" ${S.matchLearned?'checked':''}> Games use only the sounds she has learned (once she has learned 4)</label></p>
   <p class="small muted">Sounds learned so far: ${Object.keys(S.learned).length} of ${ALLG.length}.</p>
   <div class="row" style="justify-content:flex-start"><button class="btn teal" data-act="savesettings">Save</button><button class="btn white" data-act="testvoice">Test computer voice</button></div></div>
@@ -715,6 +779,7 @@ document.addEventListener('click',async e=>{
   else if(a==='game')go(t.dataset.g);
   else if(a==='ptab')go('parent',t.dataset.t);
   else if(a==='setlevel'){S.level=+t.dataset.lv;save();go('parent','dash')}
+  else if(a==='setblend'){S.blend.stage=+t.dataset.b;save();go('parent','dash')}
   else if(a==='dstart')R.dstart();
   else if(a==='dback'){if(DD.i>0)DD.i--;else if(DD.sec>0){DD.sec--;DD.i=DETECTIVE[DD.sec].n-1}ddRender()}
   else if(a==='dskip'){DD.sec++;DD.i=0;if(DD.sec>=DETECTIVE.length)ddFinish();else ddRender()}
@@ -725,7 +790,7 @@ document.addEventListener('click',async e=>{
   else if(a==='rec')doRecord(t.dataset.g,t,+(t.dataset.ms||1500));
   else if(a==='play'){if(urls[t.dataset.g])playRec(t.dataset.g)}
   else if(a==='del'){if(confirm('Delete this recording?')){await delSound(t.dataset.g);P.voices($('#pbody'))}}
-  else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;S.matchLearned=$('#ml').checked;save();go('parent','settings')}
+  else if(a==='savesettings'){S.child=$('#nm').value.trim();S.level=+$('#lv').value;S.matchLearned=$('#ml').checked;S.blend.stage=+$('#bs').value;save();go('parent','settings')}
   else if(a==='testvoice')speak('Hello! Let us read together.');
   else if(a==='export'){const snd={};for(const k of Object.keys(urls))snd[k]=await blobToData(urls[k]);const b=new Blob([JSON.stringify(Object.assign({},S,{_sounds:snd}))],{type:'application/json'});const u=URL.createObjectURL(b);const l=document.createElement('a');l.href=u;l.download='phonics-quest-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
   else if(a==='reset'){if(confirm('Erase all progress and stars? This cannot be undone.')){S={child:'',level:1,stars:0,mastery:{},sessions:[],assessments:[]};norm();save();go('home')}}
